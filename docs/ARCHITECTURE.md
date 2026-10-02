@@ -48,6 +48,10 @@ Jellyfin 12 defaults to the Modern React/MUI layout while retaining Legacy layou
 
 Client assets contain no remote executable code, accounts, telemetry, or secrets. The public settings response contains only feature flags and render limits. Metadata uses DOM text properties rather than HTML parsing. Initialization and subscriptions are idempotent, and close/destroy paths stop animation and remove listeners. Web client incompatibility is fail-soft: the normal Jellyfin Web response remains available when augmentation cannot be performed.
 
+## Catalog packaging
+
+The CI archive follows Jellyfin's catalog convention: `meta.json`, the plugin DLL, `LICENSE`, and `THIRD_PARTY_NOTICES.md` are at the ZIP root. CI emits MD5 for Jellyfin's repository manifest and SHA-256 for independent verification. `manifest.json` points to the immutable GitHub Release asset; it never points to an expiring Actions artifact.
+
 ## Compatibility risk
 
 Compatibility depends on Jellyfin Web’s internal/unsupported front-end plugin mechanism and playback object/event shapes. A Web update may change those contracts or response shapes. Test after every Jellyfin upgrade and disable/remove the plugin if the Web UI fails to load.
