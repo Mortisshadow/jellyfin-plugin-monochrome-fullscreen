@@ -51,7 +51,7 @@ function playbackFixture() {
   return { events, player, manager, adapter: new JellyfinPlaybackAdapter({ events, playbackManager: manager, ServerConnections: {} }) };
 }
 
-function fakeOverlay() { return { lastModel: null, mounted: 0, opened: 0, closed: 0, mount() { this.mounted++; }, update(model) { this.lastModel = model; }, open() { this.opened++; }, close() { this.closed++; } }; }
+function fakeOverlay() { return { lastModel: null, mounted: 0, opened: 0, closed: 0, destroyed: 0, mount() { this.mounted++; }, update(model) { this.lastModel = model; }, open() { this.opened++; }, close() { this.closed++; }, destroy() { this.destroyed++; } }; }
 function fakeVisualizer() { return { paused: [], open: [], destroyed: 0, setPlaybackPaused(v) { this.paused.push(v); }, setOverlayOpen(v) { this.open.push(v); }, destroy() { this.destroyed++; } }; }
 const audio = item => ({ type: 'start', mediaType: 'Audio', item: { id: item, title: `Title ${item}`, artist: 'Artist', album: 'Album', paused: false, volume: 80 } });
 

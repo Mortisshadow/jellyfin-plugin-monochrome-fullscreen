@@ -141,8 +141,7 @@ export function createWebGLRenderer(canvas, profile) {
         try {
             gl = canvas.getContext(contextName, CONTEXT_OPTIONS);
             if (gl) return initializeRenderer(gl, profile, webgl2);
-        } catch (error) {
-            console.warn(`[MonochromeFullscreen] ${contextName} renderer failed`, error);
+        } catch {
             gl?.getExtension?.('WEBGL_lose_context')?.loseContext?.();
         }
     }
