@@ -28,21 +28,13 @@ jobs:
           node-version: '24'
 
       - name: Install pinned client dependency
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Prepare Kawarp browser module
         run: npm run prepare:kawarp
 
       - name: Run client tests
         run: node --test tests/client/*.test.mjs
-
-      - name: Upload generated dependency lock
-        uses: actions/upload-artifact@v5
-        with:
-          name: generated-package-lock
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 1
 
   build:
     name: Build Jellyfin 12.1 plugin
@@ -62,7 +54,7 @@ jobs:
           node-version: '24'
 
       - name: Install pinned client dependency
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Prepare Kawarp browser module
         run: npm run prepare:kawarp
