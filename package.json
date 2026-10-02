@@ -4,7 +4,7 @@
   "version": "1.0.0.2",
   "type": "module",
   "dependencies": {
-    "@kawarp/core": "1.1.1"
+    "@kawarp/core": "1.3.1"
   },
   "scripts": {
     "prepare:kawarp": "cp node_modules/@kawarp/core/dist/index.js src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/kawarp.js",

@@ -1,5 +1,5 @@
-// Adapter for @kawarp/core 1.1.1, the default fullscreen background used by
-// Monochrome. The library is bundled at build time and remains MIT licensed.
+// Adapter for @kawarp/core 1.3.1. Monochrome uses the same Kawarp renderer;
+// this later release preserves its public API and is distributed under MIT.
 const KAWARP_OPTIONS = {
     warpIntensity: 1,
     blurPasses: 8,
