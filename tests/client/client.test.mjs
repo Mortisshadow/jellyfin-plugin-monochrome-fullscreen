@@ -94,13 +94,26 @@ test('overlay handles Escape, close callback, missing metadata, and text as data
   overlay.open(); overlay.root.dispatchEvent({ type: 'keydown', key: 'Escape', preventDefault() {} }); assert.equal(actions.closeCalls.length, 1); overlay.close(); assert.equal(overlay.root.hidden, true);
   const closeButton = overlay.root.children.find(child => child.dataset.action === 'close'); closeButton.dispatchEvent({ type: 'click' }); assert.equal(actions.closeCalls.length, 2);
   overlay.update({ title: 'No cover', artist: '', album: '', positionTicks: 0, durationTicks: 0, canSeek: true, paused: true, volume: 0, muted: true, coverUrl: null }); assert.equal(overlay.cover.hidden, true);
+  assert.equal(overlay.playIcon.getAttribute('hidden'), undefined); assert.equal(overlay.pauseIcon.getAttribute('hidden'), '');
+  assert.equal(overlay.volumeIcon.getAttribute('hidden'), ''); assert.equal(overlay.mutedIcon.getAttribute('hidden'), undefined);
   assert.equal(overlay.mount(), overlay.root); assert.equal(documentObject.body.children.filter(child => child.id === 'monochromeFullscreen').length, 1);
 });
 
 test('visualizer stops when overlay closes and pauses while document is hidden', () => {
   const documentObject = new Document(); const windowObject = new Window(); const canvas = new Node('canvas', documentObject); canvas.getBoundingClientRect = () => ({ width: 100, height: 100 });
-  let renders = 0; const visualizer = new AmbientVisualizer(canvas, { backgroundEffect: true, reducedMotion: false, lowPowerMode: false, fpsLimit: 30 }, { documentObject, windowObject, rendererFactory: () => ({ resize() {}, render() { renders++; }, destroy() {} }), requestAnimationFrame: fn => { windowObject.callback = fn; return 1; }, cancelAnimationFrame: () => { windowObject.callback = null; } });
+  let renders = 0; const covers = []; const visualizer = new AmbientVisualizer(canvas, { backgroundEffect: true, reducedMotion: false, lowPowerMode: false, fpsLimit: 30 }, { documentObject, windowObject, rendererFactory: () => ({ resize() {}, render() { renders++; }, loadCover(url) { covers.push(url); }, destroy() {} }), requestAnimationFrame: fn => { windowObject.callback = fn; return 1; }, cancelAnimationFrame: () => { windowObject.callback = null; } });
+  visualizer.setCoverUrl('/cover.jpg');
   visualizer.setOverlayOpen(true); assert.equal(visualizer.frameHandle, 1); documentObject.hidden = true; documentObject.dispatchEvent({ type: 'visibilitychange' }); assert.equal(visualizer.frameHandle, null); documentObject.hidden = false; visualizer.setOverlayOpen(true); visualizer.setPlaybackPaused(true); assert.equal(visualizer.frameHandle, null); visualizer.setOverlayOpen(false); assert.equal(visualizer.frameHandle, null); visualizer.destroy();
+  assert.deepEqual(covers, ['/cover.jpg']);
+});
+
+test('visualizer initializes an asynchronous renderer and forwards artwork', async () => {
+  const documentObject = new Document(); const windowObject = new Window(); const canvas = new Node('canvas', documentObject); canvas.getBoundingClientRect = () => ({ width: 160, height: 90 });
+  const covers = []; const renderer = { resize() {}, render() {}, loadCover(url) { covers.push(url); }, destroy() {} };
+  const visualizer = new AmbientVisualizer(canvas, { backgroundEffect: true, reducedMotion: false, lowPowerMode: false, fpsLimit: 30 }, { documentObject, windowObject, rendererFactory: async () => renderer, requestAnimationFrame: fn => { windowObject.callback = fn; return 1; }, cancelAnimationFrame: () => { windowObject.callback = null; } });
+  visualizer.setCoverUrl('/async-cover.jpg'); visualizer.setOverlayOpen(true);
+  await visualizer.rendererLoading;
+  assert.equal(visualizer.renderer, renderer); assert.equal(visualizer.frameHandle, 1); assert.deepEqual(covers, ['/async-cover.jpg']); visualizer.destroy();
 });
 
 test('renderer falls back from a broken WebGL2 pipeline to WebGL1', () => {

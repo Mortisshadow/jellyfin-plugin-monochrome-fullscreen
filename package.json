@@ -1,8 +1,13 @@
 {
-  "name": "jellyfin-plugin-monochrome-fullscreen-client-tests",
+  "name": "jellyfin-plugin-monochrome-fullscreen-client",
   "private": true,
+  "version": "1.0.0.2",
   "type": "module",
+  "dependencies": {
+    "@kawarp/core": "1.1.1"
+  },
   "scripts": {
+    "prepare:kawarp": "cp node_modules/@kawarp/core/dist/index.js src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/kawarp.js",
     "test": "node --test tests/client/*.test.mjs"
   }
 }

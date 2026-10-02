@@ -1,12 +1,12 @@
 {
   "category": "General",
-  "changelog": "Rebuild the fullscreen presentation from Monochrome's current compact media-column layout, replace emoji controls with SVG icons, cover Jellyfin's native player, and soften the ambient effect.",
+  "changelog": "Use Monochrome's actual Kawarp WebGL background, fix play/pause and mute icon state, and retain the lightweight renderer as a compatibility fallback.",
   "description": "Resource-efficient Monochrome-inspired fullscreen now-playing view for the server-hosted Jellyfin Web client.",
   "guid": "c31f3c78-8b2c-4e38-9bb0-5c07bf0bd774",
   "name": "Monochrome Fullscreen",
   "overview": "Fullscreen now-playing view for Jellyfin Web",
   "owner": "Mortisshadow",
   "targetAbi": "12.1.0.0",
-  "timestamp": "2026-10-02T18:30:00Z",
-  "version": "1.0.0.1"
+  "timestamp": "2026-10-02T19:00:00Z",
+  "version": "1.0.0.2"
 }

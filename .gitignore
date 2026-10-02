@@ -5,3 +5,5 @@ TestResults/
 .DS_Store
 *.user
 *.suo
+node_modules/
+src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/kawarp.js

@@ -32,9 +32,9 @@ The existing Jellyfin player remains the only playback source. The adapter calls
 
 ## Rendering and performance
 
-`visualizer.js` uses one canvas, trying WebGL2 then WebGL1, and falls back to a static gradient if context creation fails. Profiles use enabled/background-effect, reduced-motion, low-power, and FPS settings. The MVP does not inspect PCM data, FFT bins, or microphone input; motion is not audio-reactive.
+`visualizer.js` uses one canvas and loads the same `@kawarp/core` cover-driven domain-warp renderer selected by Monochrome's default fullscreen configuration. It falls back to the earlier lightweight WebGL2/WebGL1 renderer, then to the static cover gradient when context creation fails. Profiles use enabled/background-effect, reduced-motion, low-power, and FPS settings. The MVP does not inspect PCM data, FFT bins, or microphone input; motion is not beat-reactive.
 
-High uses up to 60 FPS, scale 1.0, and 96 points; Balanced uses 30 FPS, scale 0.75, and 64 points; Low Power/TV uses 24 FPS, scale 0.5, and 36 points; Static schedules no frames. Effective device pixel ratio is capped at 1.5, or 1.0 in Low Power. Buffers and shaders are created once per context. There is no `readPixels`, `getImageData`, offscreen framebuffer, full-screen backdrop blur, or per-frame cover analysis.
+High uses up to 60 FPS at scale 1.0; Balanced uses 30 FPS at scale 0.75; Low Power/TV uses 24 FPS at scale 0.5; Static schedules no frames. Effective device pixel ratio is capped at 1.5, or 1.0 in Low Power. Kawarp blurs the cover into small render targets only when artwork changes, then performs the domain warp through the plugin's bounded frame scheduler. There is no `readPixels`, `getImageData`, microphone access, or per-frame cover analysis.
 
 The animation loop stops when the overlay closes, playback pauses, the document is hidden, motion is reduced, or the WebGL context is lost. Resize and orientation changes update the bounded internal resolution. Sustained missed frame budgets reduce particles, then render scale, then FPS; quality is not automatically raised again, avoiding oscillation.
 

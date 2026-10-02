@@ -32,6 +32,11 @@ function icon(documentObject, name, paths) {
     return svg;
 }
 
+function setIconHidden(node, hidden) {
+    if (hidden) node.setAttribute('hidden', '');
+    else node.removeAttribute('hidden');
+}
+
 // Control treatment adapted and modified from Monochrome at commit
 // 5b1e6ef9b2531e3c9c9a83a1c7690b5a833567a7 (Apache-2.0).
 const ICONS = {
@@ -137,7 +142,7 @@ export class FullscreenOverlay {
         this.playButton = button(this.document, 'mfs-control mfs-play', 'Pause');
         this.playIcon = icon(this.document, 'play', ICONS.play);
         this.pauseIcon = icon(this.document, 'pause', ICONS.pause);
-        this.playIcon.hidden = true;
+        setIconHidden(this.playIcon, true);
         this.playButton.append(this.playIcon, this.pauseIcon);
         this.playButton.addEventListener('click', () => this.actions.playPause());
         this.nextButton = button(this.document, 'mfs-control mfs-next', 'Next track');
@@ -150,7 +155,7 @@ export class FullscreenOverlay {
         this.muteButton = button(this.document, 'mfs-control mfs-mute', 'Mute');
         this.volumeIcon = icon(this.document, 'volume', ICONS.volume);
         this.mutedIcon = icon(this.document, 'muted', ICONS.muted);
-        this.mutedIcon.hidden = true;
+        setIconHidden(this.mutedIcon, true);
         this.muteButton.append(this.volumeIcon, this.mutedIcon);
         this.muteButton.addEventListener('click', () => this.actions.toggleMute());
         this.volume = element(this.document, 'input', 'mfs-volume');
@@ -210,12 +215,12 @@ export class FullscreenOverlay {
         const ratio = model.durationTicks > 0 ? model.positionTicks / model.durationTicks : 0;
         this.progress.value = String(Math.round(Math.max(0, Math.min(1, ratio)) * 1000));
         this.progress.disabled = !model.canSeek;
-        this.playIcon.hidden = !model.paused;
-        this.pauseIcon.hidden = model.paused;
+        setIconHidden(this.playIcon, !model.paused);
+        setIconHidden(this.pauseIcon, model.paused);
         this.playButton.setAttribute('aria-label', model.paused ? 'Play' : 'Pause');
         this.volume.value = String(Math.max(0, Math.min(100, model.volume)));
-        this.volumeIcon.hidden = model.muted;
-        this.mutedIcon.hidden = !model.muted;
+        setIconHidden(this.volumeIcon, model.muted);
+        setIconHidden(this.mutedIcon, !model.muted);
         this.muteButton.setAttribute('aria-label', model.muted ? 'Unmute' : 'Mute');
         this.progress.style.setProperty?.('--mfs-range-value', `${Math.max(0, Math.min(1, ratio)) * 100}%`);
         this.volume.style.setProperty?.('--mfs-range-value', `${Math.max(0, Math.min(100, model.volume))}%`);

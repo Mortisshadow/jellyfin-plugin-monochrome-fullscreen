@@ -1,3 +1,5 @@
+import { createKawarpRenderer } from './kawarp-adapter.js';
+
 const CONTEXT_OPTIONS = {
     powerPreference: 'low-power',
     antialias: false,
@@ -153,6 +155,15 @@ export function createWebGLRenderer(canvas, profile) {
     return null;
 }
 
+async function createDefaultRenderer(canvas, profile) {
+    try {
+        return await createKawarpRenderer(canvas);
+    } catch (error) {
+        console.warn('[MonochromeFullscreen] Kawarp initialization failed; using lightweight fallback', error);
+        return createWebGLRenderer(canvas, profile);
+    }
+}
+
 /**
  * Single-canvas visualizer with visibility, pause, context-loss, and adaptive-quality handling.
  */
@@ -162,7 +173,7 @@ export class AmbientVisualizer {
         this.settings = settings;
         this.window = dependencies.windowObject || window;
         this.document = dependencies.documentObject || document;
-        this.rendererFactory = dependencies.rendererFactory || createWebGLRenderer;
+        this.rendererFactory = dependencies.rendererFactory || createDefaultRenderer;
         this.requestFrame = dependencies.requestAnimationFrame || (callback => this.window.requestAnimationFrame(callback));
         this.cancelFrame = dependencies.cancelAnimationFrame || (handle => this.window.cancelAnimationFrame(handle));
         this.profile = this.selectProfile();
@@ -170,6 +181,8 @@ export class AmbientVisualizer {
         this.scale = this.profile.scale;
         this.particles = this.profile.particles;
         this.renderer = null;
+        this.rendererLoading = null;
+        this.coverUrl = null;
         this.frameHandle = null;
         this.isOverlayOpen = false;
         this.isPlaybackPaused = false;
@@ -209,6 +222,17 @@ export class AmbientVisualizer {
         this.updateLoop();
     }
 
+    setCoverUrl(value) {
+        const nextUrl = value || null;
+        if (nextUrl === this.coverUrl) return;
+        this.coverUrl = nextUrl;
+        if (nextUrl && this.renderer?.loadCover) {
+            Promise.resolve(this.renderer.loadCover(nextUrl)).catch(error => {
+                console.warn('[MonochromeFullscreen] Unable to load artwork into Kawarp', error);
+            });
+        }
+    }
+
     updateLoop() {
         const shouldRun = !this.destroyed
             && this.isOverlayOpen
@@ -221,22 +245,54 @@ export class AmbientVisualizer {
     }
 
     start() {
-        if (this.frameHandle !== null) return;
+        if (this.frameHandle !== null || this.rendererLoading) return;
         if (!this.renderer) {
+            let created;
             try {
-                this.renderer = this.rendererFactory(this.canvas, this.profile);
+                created = this.rendererFactory(this.canvas, this.profile);
             } catch (error) {
                 console.warn('[MonochromeFullscreen] WebGL initialization failed; using static background', error);
-                this.renderer = null;
+                this.canvas.hidden = true;
+                return;
             }
-            this.canvas.hidden = !this.renderer;
-            if (!this.renderer) return;
-            this.resize();
+            if (created?.then) {
+                this.rendererLoading = Promise.resolve(created)
+                    .then(renderer => {
+                        this.rendererLoading = null;
+                        if (this.destroyed) {
+                            renderer?.destroy?.();
+                            return;
+                        }
+                        this.renderer = renderer;
+                        this.finishRendererInitialization();
+                        this.updateLoop();
+                    })
+                    .catch(error => {
+                        this.rendererLoading = null;
+                        this.canvas.hidden = true;
+                        console.warn('[MonochromeFullscreen] WebGL initialization failed; using static background', error);
+                    });
+                return;
+            }
+            this.renderer = created;
+            this.finishRendererInitialization();
         }
+        if (!this.renderer) return;
         this.lastFrame = 0;
         this.sampleStart = 0;
         this.sampleFrames = 0;
         this.frameHandle = this.requestFrame(this.onFrame);
+    }
+
+    finishRendererInitialization() {
+        this.canvas.hidden = !this.renderer;
+        if (!this.renderer) return;
+        this.resize();
+        if (this.coverUrl && this.renderer.loadCover) {
+            Promise.resolve(this.renderer.loadCover(this.coverUrl)).catch(error => {
+                console.warn('[MonochromeFullscreen] Unable to load artwork into Kawarp', error);
+            });
+        }
     }
 
     stop() {
@@ -323,6 +379,7 @@ export class AmbientVisualizer {
         this.contextLost = false;
         this.renderer?.destroy();
         this.renderer = null;
+        this.rendererLoading = null;
         this.updateLoop();
     }
 
@@ -339,4 +396,4 @@ export class AmbientVisualizer {
     }
 }
 
-export { CONTEXT_OPTIONS, PROFILES };
+export { CONTEXT_OPTIONS, PROFILES, createDefaultRenderer };

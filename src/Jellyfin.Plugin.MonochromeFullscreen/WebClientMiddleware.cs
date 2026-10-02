@@ -30,6 +30,8 @@ public sealed class WebClientMiddleware
             ["overlay.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.overlay.js", "text/javascript; charset=utf-8"),
             ["input-adapter.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.input-adapter.js", "text/javascript; charset=utf-8"),
             ["visualizer.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.visualizer.js", "text/javascript; charset=utf-8"),
+            ["kawarp-adapter.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.kawarp-adapter.js", "text/javascript; charset=utf-8"),
+            ["kawarp.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.kawarp.js", "text/javascript; charset=utf-8"),
             ["styles.css"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.styles.css", "text/css; charset=utf-8")
         };
     private static readonly Action<ILogger, string, Exception?> LogIndexReadFailure = LoggerMessage.Define<string>(
@@ -163,7 +165,7 @@ public sealed class WebClientMiddleware
 
         if (!content.Contains(InjectionStart, StringComparison.Ordinal))
         {
-            var version = MonochromeFullscreenPlugin.Instance?.Version?.ToString() ?? "1.0.0.1";
+            var version = MonochromeFullscreenPlugin.Instance?.Version?.ToString() ?? "1.0.0.2";
             var assetRoot = string.Concat(prefix, ClientRoute);
             var injection = string.Concat(
                 InjectionStart,
@@ -242,7 +244,7 @@ public sealed class WebClientMiddleware
 
         context.Response.StatusCode = StatusCodes.Status200OK;
         context.Response.ContentType = asset.ContentType;
-        context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        context.Response.Headers.CacheControl = "no-cache";
         context.Response.ContentLength = resource.Length;
         if (!HttpMethods.IsHead(context.Request.Method))
         {

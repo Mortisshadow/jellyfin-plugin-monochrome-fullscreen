@@ -38,6 +38,7 @@ export class MonochromeFullscreenController {
             return;
         }
         this.overlay.update(event.item);
+        this.visualizer.setCoverUrl?.(event.item.coverUrl);
         this.visualizer.setPlaybackPaused(event.item.paused);
 
         if ((event.type === 'start' || event.type === 'initial')
