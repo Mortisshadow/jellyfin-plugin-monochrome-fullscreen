@@ -67,7 +67,7 @@ jobs:
           (cd artifacts && zip -r "MonochromeFullscreen-1.0.0.0.zip" MonochromeFullscreen)
 
       - name: Upload installable plugin
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: MonochromeFullscreen-1.0.0.0
           path: artifacts/MonochromeFullscreen-1.0.0.0.zip
