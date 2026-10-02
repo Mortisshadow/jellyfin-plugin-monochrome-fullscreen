@@ -118,7 +118,8 @@ test('renderer falls back from a broken WebGL2 pipeline to WebGL1', () => {
 
 test('styles are scoped and Abyss variables include fallbacks', () => {
   const css = fs.readFileSync(path.resolve('src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/styles.css'), 'utf8');
-  assert.match(css, /#monochromeFullscreen/); assert.match(css, /var\(--abyss-accent,\s*#78a9ff\)/); assert.match(css, /var\(--abyss-radius,\s*1\.25rem\)/);
+  assert.match(css, /#monochromeFullscreen/); assert.match(css, /var\(--abyss-accent,\s*#f6f4ef\)/); assert.match(css, /var\(--abyss-radius,\s*1\.125rem\)/);
+  assert.doesNotMatch(fs.readFileSync(path.resolve('src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/overlay.js'), 'utf8'), /🔊|🔇|⏮|⏭/);
   for (const line of css.split(/\r?\n/).map(value => value.trim()).filter(value => value.endsWith('{'))) {
     if (line.startsWith('@')) continue;
     assert.equal(line.startsWith('#monochromeFullscreen'), true, `unscoped selector: ${line}`);

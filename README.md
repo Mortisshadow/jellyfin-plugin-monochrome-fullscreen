@@ -27,7 +27,7 @@ The plugin then appears in the Jellyfin catalog and can be installed and updated
 
 ### Manual artifact
 
-Download the `MonochromeFullscreen-1.0.0.0` artifact from a successful GitHub Actions run. Create a `MonochromeFullscreen` folder in Jellyfin’s plugins directory and extract `MonochromeFullscreen_1.0.0.0.zip` into that folder, then restart Jellyfin. The folder contains `Jellyfin.Plugin.MonochromeFullscreen.dll`, `meta.json`, `LICENSE`, and `THIRD_PARTY_NOTICES.md`; Web assets are embedded in the DLL. Do not copy files into the `jellyfin-web` installation.
+Download the latest `MonochromeFullscreen` artifact from a successful GitHub Actions run. Create a `MonochromeFullscreen` folder in Jellyfin’s plugins directory and extract the versioned ZIP into that folder, then restart Jellyfin. The folder contains `Jellyfin.Plugin.MonochromeFullscreen.dll`, `meta.json`, `LICENSE`, `MONOCHROME_LICENSE.txt`, and `THIRD_PARTY_NOTICES.md`; Web assets are embedded in the DLL. Do not copy files into the `jellyfin-web` installation.
 
 Common plugin roots include `/var/lib/jellyfin/plugins` on Linux, `/config/plugins` in the official container when `/config` is mounted, and `%ProgramData%\Jellyfin\Server\plugins` for the Windows tray installation. Use the plugin path appropriate to the actual Jellyfin installation.
 

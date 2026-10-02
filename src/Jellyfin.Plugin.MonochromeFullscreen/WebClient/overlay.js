@@ -14,6 +14,36 @@ function button(documentObject, className, label, text) {
     return node;
 }
 
+function icon(documentObject, name, paths) {
+    const namespace = 'http://www.w3.org/2000/svg';
+    const create = tag => documentObject.createElementNS
+        ? documentObject.createElementNS(namespace, tag)
+        : documentObject.createElement(tag);
+    const svg = create('svg');
+    svg.setAttribute('class', `mfs-icon mfs-icon-${name}`);
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    for (const data of paths) {
+        const path = create('path');
+        path.setAttribute('d', data);
+        svg.appendChild(path);
+    }
+    return svg;
+}
+
+// Control treatment adapted and modified from Monochrome at commit
+// 5b1e6ef9b2531e3c9c9a83a1c7690b5a833567a7 (Apache-2.0).
+const ICONS = {
+    close: ['M18 6 6 18M6 6l12 12'],
+    previous: ['M6.5 5v14M18 6.5l-8 5.5 8 5.5z'],
+    play: ['M8.5 5.5v13l10-6.5z'],
+    pause: ['M8 5.5v13M16 5.5v13'],
+    next: ['M17.5 5v14M6 6.5l8 5.5-8 5.5z'],
+    volume: ['M4.5 10v4h3l4 3.5v-11L7.5 10z', 'M15 9a4 4 0 010 6M17.5 6.5a7.5 7.5 0 010 11'],
+    muted: ['M4.5 10v4h3l4 3.5v-11L7.5 10z', 'M15.5 9.5l4 5M19.5 9.5l-4 5']
+};
+
 function formatTime(ticks) {
     const seconds = Math.max(0, Math.floor(Number(ticks || 0) / 10_000_000));
     const minutes = Math.floor(seconds / 60);
@@ -62,7 +92,8 @@ export class FullscreenOverlay {
         this.backdrop.setAttribute('aria-hidden', 'true');
         root.appendChild(this.backdrop);
 
-        const close = button(this.document, 'mfs-close', 'Close fullscreen view', '×');
+        const close = button(this.document, 'mfs-close', 'Close fullscreen view');
+        close.appendChild(icon(this.document, 'close', ICONS.close));
         close.dataset.action = 'close';
         close.addEventListener('click', () => this.actions.close({ fromHistory: false }));
         root.appendChild(close);
@@ -100,17 +131,27 @@ export class FullscreenOverlay {
         details.appendChild(timeline);
 
         const controls = element(this.document, 'div', 'mfs-controls');
-        this.previousButton = button(this.document, 'mfs-control mfs-previous', 'Previous track', '⏮');
+        this.previousButton = button(this.document, 'mfs-control mfs-previous', 'Previous track');
+        this.previousButton.appendChild(icon(this.document, 'previous', ICONS.previous));
         this.previousButton.addEventListener('click', () => this.actions.previous());
-        this.playButton = button(this.document, 'mfs-control mfs-play', 'Pause', 'Ⅱ');
+        this.playButton = button(this.document, 'mfs-control mfs-play', 'Pause');
+        this.playIcon = icon(this.document, 'play', ICONS.play);
+        this.pauseIcon = icon(this.document, 'pause', ICONS.pause);
+        this.playIcon.hidden = true;
+        this.playButton.append(this.playIcon, this.pauseIcon);
         this.playButton.addEventListener('click', () => this.actions.playPause());
-        this.nextButton = button(this.document, 'mfs-control mfs-next', 'Next track', '⏭');
+        this.nextButton = button(this.document, 'mfs-control mfs-next', 'Next track');
+        this.nextButton.appendChild(icon(this.document, 'next', ICONS.next));
         this.nextButton.addEventListener('click', () => this.actions.next());
         controls.append(this.previousButton, this.playButton, this.nextButton);
         details.appendChild(controls);
 
         const volumeGroup = element(this.document, 'div', 'mfs-volume-group');
-        this.muteButton = button(this.document, 'mfs-control mfs-mute', 'Mute', '🔊');
+        this.muteButton = button(this.document, 'mfs-control mfs-mute', 'Mute');
+        this.volumeIcon = icon(this.document, 'volume', ICONS.volume);
+        this.mutedIcon = icon(this.document, 'muted', ICONS.muted);
+        this.mutedIcon.hidden = true;
+        this.muteButton.append(this.volumeIcon, this.mutedIcon);
         this.muteButton.addEventListener('click', () => this.actions.toggleMute());
         this.volume = element(this.document, 'input', 'mfs-volume');
         this.volume.type = 'range';
@@ -169,17 +210,21 @@ export class FullscreenOverlay {
         const ratio = model.durationTicks > 0 ? model.positionTicks / model.durationTicks : 0;
         this.progress.value = String(Math.round(Math.max(0, Math.min(1, ratio)) * 1000));
         this.progress.disabled = !model.canSeek;
-        this.playButton.textContent = model.paused ? '▶' : 'Ⅱ';
+        this.playIcon.hidden = !model.paused;
+        this.pauseIcon.hidden = model.paused;
         this.playButton.setAttribute('aria-label', model.paused ? 'Play' : 'Pause');
         this.volume.value = String(Math.max(0, Math.min(100, model.volume)));
-        this.muteButton.textContent = model.muted ? '🔇' : '🔊';
+        this.volumeIcon.hidden = model.muted;
+        this.mutedIcon.hidden = !model.muted;
         this.muteButton.setAttribute('aria-label', model.muted ? 'Unmute' : 'Mute');
+        this.progress.style.setProperty?.('--mfs-range-value', `${Math.max(0, Math.min(1, ratio)) * 100}%`);
+        this.volume.style.setProperty?.('--mfs-range-value', `${Math.max(0, Math.min(100, model.volume))}%`);
 
         if (model.coverUrl) {
             this.cover.src = model.coverUrl;
             this.cover.hidden = false;
             this.cover.parentElement.classList.remove('mfs-artwork-missing');
-            this.backdrop.style.backgroundImage = `linear-gradient(135deg, rgba(4, 6, 12, .78), rgba(8, 11, 20, .94)), url(${JSON.stringify(model.coverUrl)})`;
+            this.backdrop.style.backgroundImage = `url(${JSON.stringify(model.coverUrl)})`;
         } else {
             this.cover.removeAttribute('src');
             this.cover.hidden = true;

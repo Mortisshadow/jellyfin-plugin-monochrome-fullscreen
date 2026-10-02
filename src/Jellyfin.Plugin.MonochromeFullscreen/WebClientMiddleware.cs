@@ -163,7 +163,7 @@ public sealed class WebClientMiddleware
 
         if (!content.Contains(InjectionStart, StringComparison.Ordinal))
         {
-            var version = MonochromeFullscreenPlugin.Instance?.Version?.ToString() ?? "1.0.0.0";
+            var version = MonochromeFullscreenPlugin.Instance?.Version?.ToString() ?? "1.0.0.1";
             var assetRoot = string.Concat(prefix, ClientRoute);
             var injection = string.Concat(
                 InjectionStart,

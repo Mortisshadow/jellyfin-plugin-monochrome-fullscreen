@@ -4,13 +4,13 @@ const CONTEXT_OPTIONS = {
     depth: false,
     stencil: false,
     preserveDrawingBuffer: false,
-    alpha: false
+    alpha: true
 };
 
 const PROFILES = {
-    high: { fps: 60, scale: 1, particles: 96, dpr: 1.5 },
-    balanced: { fps: 30, scale: 0.75, particles: 64, dpr: 1.5 },
-    low: { fps: 24, scale: 0.5, particles: 36, dpr: 1 },
+    high: { fps: 60, scale: 1, particles: 24, dpr: 1.5 },
+    balanced: { fps: 30, scale: 0.75, particles: 18, dpr: 1.5 },
+    low: { fps: 24, scale: 0.5, particles: 12, dpr: 1 },
     static: { fps: 0, scale: 0.5, particles: 0, dpr: 1 }
 };
 
@@ -21,13 +21,14 @@ function shaderSources(webgl2) {
                 in vec2 a_seed;
                 uniform float u_time;
                 uniform float u_aspect;
+                uniform float u_size;
                 void main() {
                     float phase = a_seed.x * 23.17 + u_time * (.08 + a_seed.y * .12);
                     vec2 p = vec2(sin(phase * 1.3), cos(phase * .9));
                     p += vec2(sin(phase * .31), cos(phase * .27)) * .35;
                     p.x /= max(u_aspect, .6);
                     gl_Position = vec4(p * .78, 0.0, 1.0);
-                    gl_PointSize = 3.0 + a_seed.y * 7.0;
+                    gl_PointSize = u_size * (.45 + a_seed.y * .75);
                 }`,
             fragment: `#version 300 es
                 precision mediump float;
@@ -35,7 +36,7 @@ function shaderSources(webgl2) {
                 void main() {
                     vec2 p = gl_PointCoord - .5;
                     float glow = smoothstep(.5, 0.0, length(p));
-                    outColor = vec4(vec3(.28, .58, .96) * glow, 1.0);
+                    outColor = vec4(vec3(.92, .94, .98), glow * .075);
                 }`
         };
     }
@@ -44,19 +45,20 @@ function shaderSources(webgl2) {
         vertex: `attribute vec2 a_seed;
             uniform float u_time;
             uniform float u_aspect;
+            uniform float u_size;
             void main() {
                 float phase = a_seed.x * 23.17 + u_time * (.08 + a_seed.y * .12);
                 vec2 p = vec2(sin(phase * 1.3), cos(phase * .9));
                 p += vec2(sin(phase * .31), cos(phase * .27)) * .35;
                 p.x /= max(u_aspect, .6);
                 gl_Position = vec4(p * .78, 0.0, 1.0);
-                gl_PointSize = 3.0 + a_seed.y * 7.0;
+                gl_PointSize = u_size * (.45 + a_seed.y * .75);
             }`,
         fragment: `precision mediump float;
             void main() {
                 vec2 p = gl_PointCoord - .5;
                 float glow = smoothstep(.5, 0.0, length(p));
-                gl_FragColor = vec4(vec3(.28, .58, .96) * glow, 1.0);
+                gl_FragColor = vec4(vec3(.92, .94, .98), glow * .075);
             }`
     };
 }
@@ -110,10 +112,11 @@ function initializeRenderer(gl, profile, webgl2) {
     const seedLocation = gl.getAttribLocation(program, 'a_seed');
     const timeLocation = gl.getUniformLocation(program, 'u_time');
     const aspectLocation = gl.getUniformLocation(program, 'u_aspect');
+    const sizeLocation = gl.getUniformLocation(program, 'u_size');
     gl.useProgram(program);
     gl.enableVertexAttribArray(seedLocation);
     gl.vertexAttribPointer(seedLocation, 2, gl.FLOAT, false, 0, 0);
-    gl.clearColor(0.025, 0.035, 0.065, 1);
+    gl.clearColor(0, 0, 0, 0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
@@ -126,6 +129,7 @@ function initializeRenderer(gl, profile, webgl2) {
             gl.useProgram(program);
             gl.uniform1f(timeLocation, time / 1000);
             gl.uniform1f(aspectLocation, width / Math.max(1, height));
+            gl.uniform1f(sizeLocation, Math.max(48, Math.min(width, height) * .18));
             gl.drawArrays(gl.POINTS, 0, particles);
         },
         destroy() {

@@ -1,12 +1,12 @@
 {
   "category": "General",
-  "changelog": "Initial MVP with fullscreen audio overlay, playback controls, keyboard and D-pad input, and an adaptive single-canvas visualizer.",
+  "changelog": "Rebuild the fullscreen presentation from Monochrome's current compact media-column layout, replace emoji controls with SVG icons, cover Jellyfin's native player, and soften the ambient effect.",
   "description": "Resource-efficient Monochrome-inspired fullscreen now-playing view for the server-hosted Jellyfin Web client.",
   "guid": "c31f3c78-8b2c-4e38-9bb0-5c07bf0bd774",
   "name": "Monochrome Fullscreen",
   "overview": "Fullscreen now-playing view for Jellyfin Web",
   "owner": "Mortisshadow",
   "targetAbi": "12.1.0.0",
-  "timestamp": "2026-10-02T17:45:00Z",
-  "version": "1.0.0.0"
+  "timestamp": "2026-10-02T18:30:00Z",
+  "version": "1.0.0.1"
 }
