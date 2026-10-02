@@ -10,7 +10,7 @@ namespace Jellyfin.Plugin.MonochromeFullscreen;
 /// <summary>
 /// Jellyfin server plugin entry point.
 /// </summary>
-public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
+public sealed class MonochromeFullscreenPlugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
     /// <summary>
     /// The stable plugin identifier.
@@ -18,11 +18,11 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public static readonly Guid PluginId = Guid.Parse("c31f3c78-8b2c-4e38-9bb0-5c07bf0bd774");
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Plugin"/> class.
+    /// Initializes a new instance of the <see cref="MonochromeFullscreenPlugin"/> class.
     /// </summary>
     /// <param name="applicationPaths">Jellyfin application paths.</param>
     /// <param name="xmlSerializer">Jellyfin XML serializer.</param>
-    public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+    public MonochromeFullscreenPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
         : base(applicationPaths, xmlSerializer)
     {
         Instance = this;
@@ -31,7 +31,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <summary>
     /// Gets the active plugin instance.
     /// </summary>
-    public static Plugin? Instance { get; private set; }
+    public static MonochromeFullscreenPlugin? Instance { get; private set; }
 
     /// <inheritdoc />
     public override string Name => "Monochrome Fullscreen";

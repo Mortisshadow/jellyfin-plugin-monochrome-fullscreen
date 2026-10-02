@@ -21,7 +21,7 @@ public sealed class WebClientMiddleware
     private const string InjectionStart = "<!-- monochrome-fullscreen:start -->";
     private const string InjectionEnd = "<!-- monochrome-fullscreen:end -->";
     private static readonly Assembly PluginAssembly = typeof(WebClientMiddleware).Assembly;
-    private static readonly IReadOnlyDictionary<string, (string Resource, string ContentType)> Assets =
+    private static readonly Dictionary<string, (string Resource, string ContentType)> Assets =
         new Dictionary<string, (string Resource, string ContentType)>(StringComparer.OrdinalIgnoreCase)
         {
             ["bootstrap.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.bootstrap.js", "text/javascript; charset=utf-8"),
@@ -32,6 +32,18 @@ public sealed class WebClientMiddleware
             ["visualizer.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.visualizer.js", "text/javascript; charset=utf-8"),
             ["styles.css"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.styles.css", "text/css; charset=utf-8")
         };
+    private static readonly Action<ILogger, string, Exception?> LogIndexReadFailure = LoggerMessage.Define<string>(
+        LogLevel.Error,
+        new EventId(1, nameof(LogIndexReadFailure)),
+        "[MonochromeFullscreen] Unable to read Jellyfin Web index at {IndexPath}");
+    private static readonly Action<ILogger, Exception?> LogMissingHead = LoggerMessage.Define(
+        LogLevel.Error,
+        new EventId(2, nameof(LogMissingHead)),
+        "[MonochromeFullscreen] Jellyfin Web index has no head element; client bootstrap was not injected");
+    private static readonly Action<ILogger, string, Exception?> LogConfigReadFailure = LoggerMessage.Define<string>(
+        LogLevel.Error,
+        new EventId(3, nameof(LogConfigReadFailure)),
+        "[MonochromeFullscreen] Unable to augment Jellyfin Web config at {ConfigPath}");
 
     private readonly RequestDelegate _next;
     private readonly IServerConfigurationManager _configurationManager;
@@ -63,7 +75,7 @@ public sealed class WebClientMiddleware
             return;
         }
 
-        var configuration = Plugin.Instance?.Configuration;
+        var configuration = MonochromeFullscreenPlugin.Instance?.Configuration;
         if (configuration?.Enabled != true)
         {
             await _next(context).ConfigureAwait(false);
@@ -144,14 +156,14 @@ public sealed class WebClientMiddleware
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            _logger.LogError(exception, "[MonochromeFullscreen] Unable to read Jellyfin Web index at {IndexPath}", indexPath);
+            LogIndexReadFailure(_logger, indexPath, exception);
             await _next(context).ConfigureAwait(false);
             return;
         }
 
         if (!content.Contains(InjectionStart, StringComparison.Ordinal))
         {
-            var version = Plugin.Instance?.Version?.ToString() ?? "1.0.0.0";
+            var version = MonochromeFullscreenPlugin.Instance?.Version?.ToString() ?? "1.0.0.0";
             var assetRoot = string.Concat(prefix, ClientRoute);
             var injection = string.Concat(
                 InjectionStart,
@@ -162,7 +174,7 @@ public sealed class WebClientMiddleware
             var headIndex = content.IndexOf("<head>", StringComparison.OrdinalIgnoreCase);
             if (headIndex < 0)
             {
-                _logger.LogError("[MonochromeFullscreen] Jellyfin Web index has no head element; client bootstrap was not injected");
+                LogMissingHead(_logger, null);
             }
             else
             {
@@ -197,7 +209,7 @@ public sealed class WebClientMiddleware
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
-            _logger.LogError(exception, "[MonochromeFullscreen] Unable to augment Jellyfin Web config at {ConfigPath}", configPath);
+            LogConfigReadFailure(_logger, configPath, exception);
             await _next(context).ConfigureAwait(false);
         }
     }
@@ -221,7 +233,7 @@ public sealed class WebClientMiddleware
         HttpContext context,
         (string Resource, string ContentType) asset)
     {
-        await using var resource = PluginAssembly.GetManifestResourceStream(asset.Resource);
+        using var resource = PluginAssembly.GetManifestResourceStream(asset.Resource);
         if (resource is null)
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
