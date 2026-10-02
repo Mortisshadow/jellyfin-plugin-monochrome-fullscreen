@@ -25,4 +25,8 @@ test('catalog manifest is valid and matches the plugin identity', () => {
     );
   }
 
+  const packagedRelease = plugin.versions.find(release => release.version === metadata.version);
+  assert.ok(packagedRelease, `manifest is missing packaged version ${metadata.version}`);
+  assert.equal(packagedRelease.timestamp, metadata.timestamp);
+  assert.equal(packagedRelease.changelog, metadata.changelog);
 });
