@@ -24,4 +24,9 @@ test('catalog manifest is valid and matches the plugin identity', () => {
       `https://github.com/Mortisshadow/jellyfin-plugin-monochrome-fullscreen/releases/download/v${release.version}/MonochromeFullscreen_${release.version}.zip`
     );
   }
+
+  const packagedRelease = plugin.versions.find(release => release.version === metadata.version);
+  assert.ok(packagedRelease, `manifest is missing packaged version ${metadata.version}`);
+  assert.equal(packagedRelease.timestamp, metadata.timestamp);
+  assert.equal(packagedRelease.changelog, metadata.changelog);
 });
