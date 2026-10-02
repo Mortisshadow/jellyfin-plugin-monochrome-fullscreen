@@ -1,0 +1,53 @@
+# Architecture
+
+The plugin targets Jellyfin ABI `12.1.0.0` on `net10.0`. Its service registrator adds an ASP.NET startup filter before Jellyfin’s static-file middleware. `WebClientMiddleware` serves embedded assets at `/MonochromeFullscreen/client/` and transiently augments eligible Web index/config responses in memory. No `jellyfin-web` file is written or replaced.
+
+## Client loading strategy
+
+There is no documented Jellyfin server-plugin API for globally registering JavaScript and CSS in Jellyfin Web. The MVP therefore uses a reversible response adapter:
+
+1. Requests for `/web/` or `/web/index.html` are served from Jellyfin’s existing Web path with one marked stylesheet link and one marked bootstrap script added in memory.
+2. Requests for `/web/config.json` receive the existing JSON plus the idempotently added `MonochromeFullscreenPlugin` entry.
+3. The bootstrap defines that plugin for Jellyfin Web’s built-in plugin manager. The manager then supplies the playback and connection dependencies.
+4. All client modules, CSS, and the non-sensitive normalized settings JSON are served from embedded DLL resources.
+
+The markers are `monochrome-fullscreen:start` and `monochrome-fullscreen:end`. They never persist to disk. Disabled configuration bypasses the adapter. Disabling or uninstalling the Jellyfin plugin and restarting the server removes the middleware, so there is no cleanup write and Jellyfin updates cannot leave a patched `index.html` behind. A missing or unreadable Web installation is logged with the `[MonochromeFullscreen]` prefix and Jellyfin’s normal pipeline is allowed to handle the request.
+
+This ASP.NET startup filter and the Web plugin manager are pragmatic extension points, not a promised Jellyfin server-plugin API. The approach must be revalidated for every Jellyfin release.
+
+## Module boundaries
+
+- `Plugin` and `PluginConfiguration` own server identity, persistence, defaults, and validation.
+- `WebClientMiddleware` owns response augmentation and embedded-asset delivery.
+- `bootstrap.js` performs only Web plugin registration.
+- `playback-adapter.js` is the sole boundary around Jellyfin playback objects, events, image URLs, and controls.
+- `plugin.js` coordinates lifecycle and policy without manipulating Jellyfin internals.
+- `overlay.js` builds the safe DOM using `textContent`; it does not know about Jellyfin.
+- `input-adapter.js` owns focus, keyboard, D-pad, and browser-back behavior.
+- `visualizer.js` owns the single canvas and renderer lifecycle.
+
+The bootstrap registers through Jellyfin Web’s built-in Web plugin manager and receives `playbackManager`, `events`, and `ServerConnections`. That manager is part of the official Jellyfin Web source, but it is not a documented compatibility contract for third-party server plugins. A playback adapter subscribes to playback start/stop/player-change plus player time, pause, and volume events, and uses the existing player for controls. The overlay owns focus trapping, browser-back history, Escape/Backspace/BrowserBack, D-pad/arrow navigation, ten-second seeking, and focus restoration.
+
+The existing Jellyfin player remains the only playback source. The adapter calls its play/pause, previous/next, seek, volume, and mute methods and never creates an audio element or media graph. Metadata is converted into a plain view model before reaching the UI.
+
+## Rendering and performance
+
+`visualizer.js` uses one canvas, trying WebGL2 then WebGL1, and falls back to a static gradient if context creation fails. Profiles use enabled/background-effect, reduced-motion, low-power, and FPS settings. The MVP does not inspect PCM data, FFT bins, or microphone input; motion is not audio-reactive.
+
+High uses up to 60 FPS, scale 1.0, and 96 points; Balanced uses 30 FPS, scale 0.75, and 64 points; Low Power/TV uses 24 FPS, scale 0.5, and 36 points; Static schedules no frames. Effective device pixel ratio is capped at 1.5, or 1.0 in Low Power. Buffers and shaders are created once per context. There is no `readPixels`, `getImageData`, offscreen framebuffer, full-screen backdrop blur, or per-frame cover analysis.
+
+The animation loop stops when the overlay closes, playback pauses, the document is hidden, motion is reduced, or the WebGL context is lost. Resize and orientation changes update the bounded internal resolution. Sustained missed frame budgets reduce particles, then render scale, then FPS; quality is not automatically raised again, avoiding oscillation.
+
+## Client boundary
+
+Only a client executing this server’s Web bundle can receive the response adapter. Desktop and mobile browsers are the supported MVP. Android TV browsers and a sideloaded normal Android app are experimental. Native Android TV, Tizen, Roku, Swiftfin, and other native clients require separate client implementations. Jellyfin Media Player is a manual test target rather than a compatibility claim because packaged versions may ship their own Web client.
+
+Jellyfin 12 defaults to the Modern React/MUI layout while retaining Legacy layouts. The overlay does not select either layout’s component classes: it attaches one uniquely identified root to `document.body`, and every plugin selector is scoped below `#monochromeFullscreen`. This keeps the same client module usable in Modern and Legacy views. Abyss is optional; `--abyss-accent` and `--abyss-radius` are consumed with local fallback values, and no Abyss stylesheet is changed.
+
+## Failure and security model
+
+Client assets contain no remote executable code, accounts, telemetry, or secrets. The public settings response contains only feature flags and render limits. Metadata uses DOM text properties rather than HTML parsing. Initialization and subscriptions are idempotent, and close/destroy paths stop animation and remove listeners. Web client incompatibility is fail-soft: the normal Jellyfin Web response remains available when augmentation cannot be performed.
+
+## Compatibility risk
+
+Compatibility depends on Jellyfin Web’s internal/unsupported front-end plugin mechanism and playback object/event shapes. A Web update may change those contracts or response shapes. Test after every Jellyfin upgrade and disable/remove the plugin if the Web UI fails to load.

@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  client-tests:
+    name: Client tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run dependency-free client tests
+        run: node --test tests/client/*.test.mjs
+
+  build:
+    name: Build Jellyfin 12.1 plugin
+    needs: client-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore Jellyfin.Plugin.MonochromeFullscreen.sln
+
+      - name: Build
+        run: dotnet build Jellyfin.Plugin.MonochromeFullscreen.sln --configuration Release --no-restore
+
+      - name: Assemble installable plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          plugin_dir="artifacts/MonochromeFullscreen"
+          mkdir -p "$plugin_dir"
+          cp src/Jellyfin.Plugin.MonochromeFullscreen/bin/Release/net10.0/Jellyfin.Plugin.MonochromeFullscreen.dll "$plugin_dir/"
+          cp LICENSE THIRD_PARTY_NOTICES.md "$plugin_dir/"
+          find "$plugin_dir" -maxdepth 1 -type f -print | sort
+          test -f "$plugin_dir/Jellyfin.Plugin.MonochromeFullscreen.dll"
+          test ! -e "$plugin_dir/Jellyfin.Plugin.MonochromeFullscreen.pdb"
+          (cd artifacts && zip -r "MonochromeFullscreen-1.0.0.0.zip" MonochromeFullscreen)
+
+      - name: Upload installable plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: MonochromeFullscreen-1.0.0.0
+          path: artifacts/MonochromeFullscreen-1.0.0.0.zip
+          if-no-files-found: error
+          retention-days: 30
