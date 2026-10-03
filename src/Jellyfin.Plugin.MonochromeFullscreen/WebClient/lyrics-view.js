@@ -19,16 +19,35 @@ function setProgress(node, value) {
 }
 
 export class LyricsView {
-    constructor({ host, documentObject = host?.ownerDocument, onSeek = null } = {}) {
+    constructor({
+        host,
+        documentObject = host?.ownerDocument,
+        onSeek = null,
+        preferAmLyrics = Boolean(globalThis.customElements?.get?.('am-lyrics')),
+        requestAnimationFrame = globalThis.requestAnimationFrame?.bind(globalThis),
+        cancelAnimationFrame = globalThis.cancelAnimationFrame?.bind(globalThis),
+        now = () => globalThis.performance?.now?.() ?? Date.now()
+    } = {}) {
         if (!host || !documentObject) throw new Error('LyricsView requires an injected host element.');
         this.host = host;
         this.document = documentObject;
         this.onSeek = typeof onSeek === 'function' ? onSeek : null;
+        this.preferAmLyrics = Boolean(preferAmLyrics);
+        this.requestFrame = requestAnimationFrame;
+        this.cancelFrame = cancelAnimationFrame;
+        this.now = now;
         this.timeline = new LyricsTimeline();
         this.nodes = [];
         this.activeIndex = -1;
         this.root = null;
+        this.amLyrics = null;
+        this.animationFrame = null;
+        this.anchorPositionMs = 0;
+        this.anchorTimestamp = 0;
+        this.playbackPaused = true;
+        this.active = false;
         this.documentModel = null;
+        this.tick = this.tick.bind(this);
         this.mount();
     }
 
@@ -41,11 +60,15 @@ export class LyricsView {
         return this.root;
     }
 
-    setDocument(document) {
+    setDocument(document, item = null) {
         this.clear();
         this.documentModel = document || null;
         this.timeline.setDocument(document);
         this.root.classList?.toggle?.('mfs-lyrics-unsynced', document?.syncType === 'unsynced');
+        if (this.preferAmLyrics && document?.rawTtml) {
+            this.mountAmLyrics(document.rawTtml, item);
+            return;
+        }
         const main = this.timeline.track;
         if (!main) return;
         const translation = document.tracks.find(track => track.type === 'translation');
@@ -92,19 +115,103 @@ export class LyricsView {
         });
     }
 
+    mountAmLyrics(ttml, item) {
+        const component = element(this.document, 'am-lyrics', 'mfs-am-lyrics');
+        component.setAttribute('autoscroll', '');
+        component.setAttribute('interpolate', '');
+        component.setAttribute('highlight-color', '#f6f4ef');
+        component.setAttribute('no-auto-alternates', '');
+        component.ttml = ttml;
+        component.songTitle = item?.title || '';
+        component.songArtist = item?.artist || '';
+        component.songAlbum = item?.album || '';
+        component.songDurationMs = Math.max(0, Number(item?.durationTicks || 0) / 10_000);
+        component.addEventListener('line-click', event => {
+            const milliseconds = Number(event?.detail?.timestamp);
+            if (Number.isFinite(milliseconds) && milliseconds >= 0) {
+                this.onSeek?.(Math.round(milliseconds * 10_000));
+            }
+        });
+        this.root.classList?.add?.('mfs-lyrics-am');
+        this.root.appendChild(component);
+        this.amLyrics = component;
+        this.applyAmLyricsTweaks(component);
+    }
+
+    applyAmLyricsTweaks(component) {
+        const shadowRoot = component?.shadowRoot;
+        if (!shadowRoot) {
+            component?.updateComplete?.then?.(() => {
+                if (this.amLyrics === component) this.applyAmLyricsTweaks(component);
+            });
+            return;
+        }
+        if (shadowRoot.getElementById?.('monochrome-fullscreen-lyrics-tweaks')) return;
+        const style = element(this.document, 'style');
+        style.id = 'monochrome-fullscreen-lyrics-tweaks';
+        style.textContent = `
+            .lyrics-container {
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+            }
+            .lyrics-container::-webkit-scrollbar {
+                width: 0 !important;
+                height: 0 !important;
+                display: none !important;
+                background: transparent !important;
+            }
+            .lyrics-line {
+                transform-origin: left center;
+                transition:
+                    opacity .42s ease,
+                    transform .55s cubic-bezier(.22, 1, .36, 1) var(--lyrics-line-delay, 0ms),
+                    filter .48s cubic-bezier(.22, 1, .36, 1) !important;
+            }
+            .lyrics-line:not(.active):not(.pre-active) { opacity: .44; }
+            .lyrics-line-container {
+                transition:
+                    transform .72s cubic-bezier(.22, 1, .36, 1),
+                    background-color .3s ease,
+                    color .3s ease !important;
+            }
+            .lyrics-line.active .lyrics-line-container,
+            .lyrics-line.pre-active .lyrics-line-container {
+                transition:
+                    transform .56s cubic-bezier(.22, 1, .36, 1),
+                    background-color .22s ease,
+                    color .22s ease !important;
+            }
+            .lyrics-line.active .lyrics-line-container { transform: scale(1.015); }
+        `;
+        shadowRoot.appendChild(style);
+    }
+
     clear() {
         if (!this.root) return;
+        this.stopClock();
+        if (this.amLyrics) this.amLyrics.duration = -1;
         while (this.root.firstChild) this.root.removeChild(this.root.firstChild);
         // Minimal DOM shims used by host tests may expose only a children array.
         if (Array.isArray(this.root.children)) this.root.children.splice(0);
         this.nodes = [];
         this.activeIndex = -1;
+        this.amLyrics = null;
         this.documentModel = null;
+        this.root.classList?.remove?.('mfs-lyrics-am');
         this.root.classList?.toggle?.('mfs-lyrics-unsynced', false);
         this.timeline.setDocument(null);
     }
 
-    update(positionTicks) {
+    update(positionTicks, paused = this.playbackPaused) {
+        if (this.amLyrics) {
+            this.anchorPositionMs = Math.max(0, Number(positionTicks || 0) / 10_000);
+            this.anchorTimestamp = this.now();
+            this.playbackPaused = Boolean(paused);
+            this.amLyrics.currentTime = this.anchorPositionMs;
+            if (this.active && !this.playbackPaused) this.startClock();
+            else this.stopClock();
+            return { positionTicks, line: null, index: -1 };
+        }
         const state = this.timeline.update(positionTicks);
         if (state.index !== this.activeIndex) {
             this.activeIndex = state.index;
@@ -125,7 +232,34 @@ export class LyricsView {
         return state;
     }
 
+    setActive(active) {
+        this.active = Boolean(active);
+        if (this.active && this.amLyrics && !this.playbackPaused) this.startClock();
+        else this.stopClock();
+    }
+
+    startClock() {
+        if (this.animationFrame !== null || typeof this.requestFrame !== 'function') return;
+        this.animationFrame = this.requestFrame(this.tick);
+    }
+
+    stopClock() {
+        if (this.animationFrame !== null && typeof this.cancelFrame === 'function') {
+            this.cancelFrame(this.animationFrame);
+        }
+        this.animationFrame = null;
+    }
+
+    tick(timestamp) {
+        this.animationFrame = null;
+        if (!this.active || this.playbackPaused || !this.amLyrics) return;
+        const elapsed = Math.max(0, Number(timestamp) - this.anchorTimestamp);
+        this.amLyrics.currentTime = this.anchorPositionMs + elapsed;
+        this.startClock();
+    }
+
     destroy() {
+        this.active = false;
         this.clear();
         this.root?.remove?.();
         if (this.root?.parentElement && Array.isArray(this.root.parentElement.children)) {

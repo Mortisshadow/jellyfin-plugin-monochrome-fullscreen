@@ -8,6 +8,14 @@
     "overview": "Fullscreen now-playing view for Jellyfin Web",
     "versions": [
       {
+        "checksum": "00000000000000000000000000000000",
+        "changelog": "Use Monochrome's am-lyrics renderer and top controls, keep lyric motion synchronized between Jellyfin events, and remove adaptive visualizer flashes.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/Mortisshadow/jellyfin-plugin-monochrome-fullscreen/releases/download/v1.0.0.7/MonochromeFullscreen_1.0.0.7.zip",
+        "timestamp": "2026-10-03T17:03:27Z",
+        "version": "1.0.0.7"
+      },
+      {
         "checksum": "78e0f309ae582ddc0fb7640e33f1030d",
         "changelog": "Parse am-lyrics TTML timing correctly, merge song sections into one timeline, preserve background vocals, and brighten Kawarp output.",
         "targetAbi": "12.1.0.0",

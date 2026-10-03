@@ -178,6 +178,7 @@ export class AmbientVisualizer {
         this.requestFrame = dependencies.requestAnimationFrame || (callback => this.window.requestAnimationFrame(callback));
         this.cancelFrame = dependencies.cancelAnimationFrame || (handle => this.window.cancelAnimationFrame(handle));
         this.profile = this.selectProfile();
+        this.enabled = settings.backgroundEffect !== false;
         this.currentFps = Math.min(this.profile.fps, settings.fpsLimit || 30);
         this.scale = this.profile.scale;
         this.particles = this.profile.particles;
@@ -189,11 +190,13 @@ export class AmbientVisualizer {
         this.isPlaybackPaused = false;
         this.contextLost = false;
         this.animationClock = new ActiveAnimationClock();
+        this.lastRenderedTime = null;
         this.lastFrame = 0;
         this.slowSince = 0;
         this.sampleStart = 0;
         this.sampleFrames = 0;
         this.destroyed = false;
+        this.canvas.hidden = !this.enabled;
         this.onFrame = this.onFrame.bind(this);
         this.onVisibilityChange = this.onVisibilityChange.bind(this);
         this.onResize = this.onResize.bind(this);
@@ -208,7 +211,7 @@ export class AmbientVisualizer {
 
     selectProfile() {
         const systemReduced = this.window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-        if (!this.settings.backgroundEffect || this.settings.reducedMotion || systemReduced) return PROFILES.static;
+        if (this.settings.reducedMotion || systemReduced) return PROFILES.static;
         if (this.settings.lowPowerMode || this.settings.fpsLimit === 24) return PROFILES.low;
         if (this.settings.fpsLimit === 60) return PROFILES.high;
         return PROFILES.balanced;
@@ -235,8 +238,21 @@ export class AmbientVisualizer {
         }
     }
 
+    setEnabled(value) {
+        this.enabled = Boolean(value);
+        this.canvas.hidden = !this.enabled || !this.renderer;
+        this.canvas.classList?.toggle?.('mfs-visualizer-active', this.enabled && Boolean(this.renderer));
+        this.updateLoop();
+        return this.enabled;
+    }
+
+    toggleEnabled() {
+        return this.setEnabled(!this.enabled);
+    }
+
     updateLoop() {
         const shouldRun = !this.destroyed
+            && this.enabled
             && this.isOverlayOpen
             && !this.isPlaybackPaused
             && !this.document.hidden
@@ -288,9 +304,8 @@ export class AmbientVisualizer {
     }
 
     finishRendererInitialization() {
-        this.canvas.hidden = !this.renderer;
-        if (this.renderer) this.canvas.classList?.add?.('mfs-visualizer-active');
-        else this.canvas.classList?.remove?.('mfs-visualizer-active');
+        this.canvas.hidden = !this.enabled || !this.renderer;
+        this.canvas.classList?.toggle?.('mfs-visualizer-active', this.enabled && Boolean(this.renderer));
         if (!this.renderer) return;
         this.resize();
         if (this.coverUrl && this.renderer.loadCover) {
@@ -310,7 +325,7 @@ export class AmbientVisualizer {
 
     onFrame(timestamp) {
         this.frameHandle = null;
-        if (!this.isOverlayOpen || this.isPlaybackPaused || this.document.hidden || this.contextLost) {
+        if (!this.enabled || !this.isOverlayOpen || this.isPlaybackPaused || this.document.hidden || this.contextLost) {
             this.animationClock.pause();
             return;
         }
@@ -318,6 +333,7 @@ export class AmbientVisualizer {
         const interval = 1000 / this.currentFps;
         if (!this.lastFrame || timestamp - this.lastFrame >= interval) {
             this.renderer?.render(activeTime, this.canvas.width, this.canvas.height, this.particles);
+            this.lastRenderedTime = activeTime;
             this.lastFrame = timestamp;
             this.measurePerformance(timestamp);
         }
@@ -367,6 +383,12 @@ export class AmbientVisualizer {
             this.canvas.width = width;
             this.canvas.height = height;
             this.renderer.resize(width, height);
+            // Resizing a canvas clears its drawing buffer. Redraw the most recent
+            // frame immediately so adaptive-quality changes do not flash black
+            // while waiting for the next animation frame.
+            if (this.lastRenderedTime !== null) {
+                this.renderer.render(this.lastRenderedTime, width, height, this.particles);
+            }
         }
     }
 
@@ -383,6 +405,7 @@ export class AmbientVisualizer {
         this.contextLost = true;
         this.stop();
         this.canvas.hidden = true;
+        this.canvas.classList?.remove?.('mfs-visualizer-active');
     }
 
     onContextRestored() {

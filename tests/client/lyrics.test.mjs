@@ -10,7 +10,12 @@ class Node {
         this.tagName = tag.toUpperCase(); this.ownerDocument = ownerDocument; this.children = []; this.parentElement = null;
         this.textContent = ''; this.dataset = {}; this.attributes = {}; this.listeners = {};
         this.style = { values: {}, setProperty: (key, value) => { this.style.values[key] = value; } };
-        this.classList = { values: new Set(), toggle: (name, force) => force ? this.classList.values.add(name) : this.classList.values.delete(name) };
+        this.classList = {
+            values: new Set(),
+            add: (...names) => names.forEach(name => this.classList.values.add(name)),
+            remove: (...names) => names.forEach(name => this.classList.values.delete(name)),
+            toggle: (name, force) => force ? this.classList.values.add(name) : this.classList.values.delete(name)
+        };
     }
     appendChild(node) { node.parentElement = this; this.children.push(node); return node; }
     removeChild(node) { this.children.splice(this.children.indexOf(node), 1); node.parentElement = null; }
@@ -48,6 +53,12 @@ test('future tracks retain roles, agents, background, and syllable timing', () =
     assert.deepEqual(result.tracks[1].lines[0].agentIds, ['lead']);
     assert.equal(result.tracks[1].lines[0].background, true);
     assert.equal(result.tracks[1].lines[0].parts[0].endTicks, 9);
+});
+
+test('normalizer retains authenticated raw TTML for the Monochrome renderer', () => {
+    const rawTtml = '<?xml version="1.0"?><tt><body><p begin="1s">Line</p></body></tt>';
+    const result = normalizeLyricDocument({ RawTtml: rawTtml, Cues: [{ Text: 'Line', StartTicks: 10_000_000 }] });
+    assert.equal(result.rawTtml, rawTtml);
 });
 
 test('timeline binary-seeks backwards and advances monotonically with an offset', () => {
@@ -88,6 +99,39 @@ test('view uses textContent, renders secondary lines, updates progress, and seek
     view.update(15); assert.equal(view.nodes[0].partNodes[0].style.values['--mfs-lyric-progress'], '50%');
     assert.equal(row.classList.values.has('mfs-lyric-active'), true);
     view.destroy(); assert.equal(host.children.length, 0);
+});
+
+test('view drives am-lyrics in milliseconds between Jellyfin playback events', () => {
+    const documentObject = new Document(); const host = new Node('div', documentObject); const seeks = [];
+    const callbacks = []; let now = 100;
+    const view = new LyricsView({
+        host,
+        documentObject,
+        onSeek: ticks => seeks.push(ticks),
+        preferAmLyrics: true,
+        requestAnimationFrame: callback => { callbacks.push(callback); return callbacks.length; },
+        cancelAnimationFrame() {},
+        now: () => now
+    });
+    const rawTtml = '<tt><body><p begin="1s" end="2s">Line</p></body></tt>';
+    const document = normalizeLyricDocument({ RawTtml: rawTtml, Cues: [{ Text: 'Line', StartTicks: 10_000_000 }] });
+    view.setDocument(document, { title: 'Song', artist: 'Artist', album: 'Album', durationTicks: 90_000_000 });
+    assert.equal(view.amLyrics.ttml, rawTtml);
+    assert.equal(view.amLyrics.songTitle, 'Song');
+    assert.equal(view.amLyrics.songDurationMs, 9000);
+    view.amLyrics.dispatchEvent({ type: 'line-click', detail: { timestamp: 1234 } });
+    assert.deepEqual(seeks, [12_340_000]);
+
+    view.setActive(true);
+    view.update(50_000_000, false);
+    assert.equal(view.amLyrics.currentTime, 5000);
+    assert.equal(callbacks.length, 1);
+    now = 600;
+    callbacks.shift()(now);
+    assert.equal(view.amLyrics.currentTime, 5500);
+    view.update(55_000_000, true);
+    assert.equal(view.amLyrics.currentTime, 5500);
+    view.destroy();
 });
 
 test('missing and malformed data returns null without throwing', async () => {

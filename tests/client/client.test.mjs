@@ -16,7 +16,7 @@ class Events {
 }
 
 class Node {
-  constructor(tag = 'div', doc = null) { this.tagName = tag.toUpperCase(); this.ownerDocument = doc; this.children = []; this.parentElement = null; this.listeners = {}; this.classList = { values: new Set(), add: (...v) => v.forEach(x => this.classList.values.add(x)), remove: (...v) => v.forEach(x => this.classList.values.delete(x)), contains: x => this.classList.values.has(x) }; this.dataset = {}; this.style = {}; this.hidden = false; this.textContent = ''; this.attributes = {}; this.tabIndex = 0; }
+  constructor(tag = 'div', doc = null) { this.tagName = tag.toUpperCase(); this.ownerDocument = doc; this.children = []; this.parentElement = null; this.listeners = {}; this.classList = { values: new Set(), add: (...v) => v.forEach(x => this.classList.values.add(x)), remove: (...v) => v.forEach(x => this.classList.values.delete(x)), contains: x => this.classList.values.has(x), toggle: (x, force) => force ? this.classList.values.add(x) : this.classList.values.delete(x) }; this.dataset = {}; this.style = {}; this.hidden = false; this.textContent = ''; this.attributes = {}; this.tabIndex = 0; }
   append(...nodes) { nodes.forEach(n => { n.parentElement = this; this.children.push(n); }); }
   appendChild(n) { this.append(n); return n; }
   remove() { this.parentElement?.children.splice(this.parentElement.children.indexOf(this), 1); }
@@ -106,13 +106,17 @@ test('controller loads lyrics once per item and preserves explicit lyrics visibi
   assert.equal(fetches.length, 1); assert.equal(lyricsView.positions.at(-1), 8);
 });
 
-test('overlay handles Escape, close callback, missing metadata, and text as data', () => {
+test('overlay handles Escape, top actions, missing metadata, and text as data', () => {
   globalThis.CSS = { escape: value => String(value).replaceAll('"', '\\"') };
-  const documentObject = new Document(); const windowObject = new Window(); const actions = { closeCalls: [], close(options) { this.closeCalls.push(options); }, seek() {}, seekBy() {}, previous() {}, next() {}, playPause() {}, setVolume() {}, toggleMute() {} };
+  const documentObject = new Document(); const windowObject = new Window(); const actions = { closeCalls: [], visualizer: [], ui: [], close(options) { this.closeCalls.push(options); }, seek() {}, seekBy() {}, previous() {}, next() {}, playPause() {}, setVolume() {}, toggleMute() {}, toggleLyrics() {}, toggleVisualizer() { this.visualizer.push(true); }, toggleUi() { this.ui.push(true); } };
   const overlay = new FullscreenOverlay({ documentObject, windowObject, actions }); overlay.mount(); overlay.update({ title: '<script>alert(1)</script>', artist: null, album: null, positionTicks: 0, durationTicks: 0, canSeek: false, paused: false, volume: 50, muted: false });
   assert.equal(overlay.title.textContent, '<script>alert(1)</script>'); assert.equal(overlay.title.children.length, 0); assert.doesNotThrow(() => overlay.update({}));
   overlay.open(); overlay.root.dispatchEvent({ type: 'keydown', key: 'Escape', preventDefault() {} }); assert.equal(actions.closeCalls.length, 1); overlay.close(); assert.equal(overlay.root.hidden, true);
-  const closeButton = overlay.root.children.find(child => child.dataset.action === 'close'); closeButton.dispatchEvent({ type: 'click' }); assert.equal(actions.closeCalls.length, 2);
+  const topActions = overlay.root.children.find(child => child.children.some(grandchild => grandchild.dataset.action === 'close')); assert.deepEqual(topActions.children.map(child => child.dataset.action), ['close', 'toggleLyrics', 'toggleVisualizer', 'toggleUi']);
+  topActions.children[2].dispatchEvent({ type: 'click' }); topActions.children[3].dispatchEvent({ type: 'click' }); assert.deepEqual(actions.visualizer, [true]); assert.deepEqual(actions.ui, [true]);
+  overlay.setVisualizerEnabled(false); assert.equal(overlay.visualizerButton.getAttribute('aria-pressed'), 'false'); assert.equal(overlay.visualizerButton.getAttribute('aria-label'), 'Enable visualizer');
+  overlay.setUiHidden(true); assert.equal(overlay.uiButton.getAttribute('aria-pressed'), 'true'); assert.equal(overlay.uiButton.getAttribute('aria-label'), 'Show interface');
+  topActions.children[0].dispatchEvent({ type: 'click' }); assert.equal(actions.closeCalls.length, 2);
   overlay.update({ title: 'No cover', artist: '', album: '', positionTicks: 0, durationTicks: 0, canSeek: true, paused: true, volume: 0, muted: true, coverUrl: null }); assert.equal(overlay.cover.hidden, true);
   assert.equal(overlay.playIcon.getAttribute('hidden'), undefined); assert.equal(overlay.pauseIcon.getAttribute('hidden'), '');
   assert.equal(overlay.volumeIcon.getAttribute('hidden'), ''); assert.equal(overlay.mutedIcon.getAttribute('hidden'), undefined);
@@ -136,6 +140,15 @@ test('visualizer initializes an asynchronous renderer and forwards artwork', asy
   assert.equal(visualizer.renderer, renderer); assert.equal(visualizer.frameHandle, 1); assert.deepEqual(covers, ['/async-cover.jpg']); visualizer.destroy();
 });
 
+test('visualizer can be enabled and disabled without recreating its renderer', () => {
+  const documentObject = new Document(); const windowObject = new Window(); const canvas = new Node('canvas', documentObject); canvas.getBoundingClientRect = () => ({ width: 100, height: 100 });
+  let factories = 0; const visualizer = new AmbientVisualizer(canvas, { backgroundEffect: false, reducedMotion: false, lowPowerMode: false, fpsLimit: 30 }, { documentObject, windowObject, rendererFactory: () => { factories++; return { resize() {}, render() {}, destroy() {} }; }, requestAnimationFrame: fn => { windowObject.callback = fn; return 1; }, cancelAnimationFrame: () => { windowObject.callback = null; } });
+  visualizer.setOverlayOpen(true); assert.equal(visualizer.frameHandle, null); assert.equal(canvas.hidden, true);
+  assert.equal(visualizer.toggleEnabled(), true); assert.equal(visualizer.frameHandle, 1); assert.equal(canvas.hidden, false); assert.equal(factories, 1);
+  assert.equal(visualizer.toggleEnabled(), false); assert.equal(visualizer.frameHandle, null); assert.equal(canvas.hidden, true);
+  assert.equal(visualizer.toggleEnabled(), true); assert.equal(factories, 1); visualizer.destroy();
+});
+
 test('renderer falls back from a broken WebGL2 pipeline to WebGL1', () => {
   const fakeGl = compileOk => ({
     VERTEX_SHADER: 1, FRAGMENT_SHADER: 2, COMPILE_STATUS: 3, LINK_STATUS: 4, ARRAY_BUFFER: 5, STATIC_DRAW: 6, FLOAT: 7, BLEND: 8, SRC_ALPHA: 9, ONE: 10, COLOR_BUFFER_BIT: 11, POINTS: 12,
@@ -155,11 +168,13 @@ test('styles are scoped and Abyss variables include fallbacks', () => {
   assert.match(css, /#monochromeFullscreen/); assert.match(css, /var\(--abyss-accent,\s*#f6f4ef\)/); assert.match(css, /var\(--abyss-radius,\s*1\.125rem\)/);
   assert.match(css, /mask-image:\s*radial-gradient\(circle at center,\s*transparent 0 6\.25%/);
   assert.doesNotMatch(css, /\.mfs-spindle::after/);
-  assert.match(css, /\.mfs-visualizer\s*\{[^}]*opacity:\s*1;[^}]*brightness\(1\.05\)/);
+  assert.match(css, /\.mfs-visualizer\s*\{[^}]*opacity:\s*\.8;[^}]*brightness\(\.8\)/);
   assert.match(css, /--mfs-top-control-offset:\s*calc\(env\(safe-area-inset-top\) \+ clamp\(/);
   assert.match(css, /top:\s*var\(--mfs-top-control-offset\)/);
   assert.match(lyricsCss, /opacity:\s*max\(0\.08,\s*calc\(1 - var\(--mfs-lyric-distance\) \* 0\.55\)\)/);
   assert.match(lyricsCss, /--mfs-lyric-color:\s*var\(--abyss-text,\s*#f6f4ef\)/);
+  assert.match(lyricsCss, /\.mfs-lyrics\.mfs-lyrics-am/);
+  assert.match(lyricsCss, /--lyplus-font-size-base:/);
   assert.doesNotMatch(lyricsCss, /linear-gradient\([^\n]*currentColor/);
   assert.doesNotMatch(fs.readFileSync(path.resolve('src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/overlay.js'), 'utf8'), /🔊|🔇|⏮|⏭/);
   for (const line of css.split(/\r?\n/).map(value => value.trim()).filter(value => value.endsWith('{'))) {
@@ -170,7 +185,7 @@ test('styles are scoped and Abyss variables include fallbacks', () => {
 
 test('middleware exposes every imported client module and both stylesheets', () => {
   const middleware = fs.readFileSync(path.resolve('src/Jellyfin.Plugin.MonochromeFullscreen/WebClientMiddleware.cs'), 'utf8');
-  for (const asset of ['animation-clock.js', 'lyrics-adapter.js', 'lyrics-model.js', 'lyrics-timeline.js', 'lyrics-view.js', 'lyrics.css']) {
+  for (const asset of ['animation-clock.js', 'am-lyrics.js', 'lyrics-adapter.js', 'lyrics-model.js', 'lyrics-timeline.js', 'lyrics-view.js', 'lyrics.css']) {
     assert.match(middleware, new RegExp(`\\["${asset.replace('.', '\\.')}"\\]`));
   }
   assert.match(middleware, /lyrics\.css\?v=/);

@@ -44,6 +44,7 @@ jobs:
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
+      AM_LYRICS_COMMIT: '4676f22044bb16a9e548b1f0085b03ad747725c9'
     steps:
       - name: Check out source
         uses: actions/checkout@v5
@@ -58,6 +59,19 @@ jobs:
 
       - name: Prepare Kawarp browser module
         run: npm run prepare:kawarp
+
+      - name: Prepare pinned am-lyrics web component
+        shell: bash
+        run: |
+          set -euo pipefail
+          am_lyrics_dir="$RUNNER_TEMP/am-lyrics"
+          git clone --filter=blob:none https://github.com/binimum/am-lyrics.git "$am_lyrics_dir"
+          git -C "$am_lyrics_dir" checkout --detach "$AM_LYRICS_COMMIT"
+          test "$(git -C "$am_lyrics_dir" rev-parse HEAD)" = "$AM_LYRICS_COMMIT"
+          npm ci --prefix "$am_lyrics_dir" --ignore-scripts --no-audit --no-fund
+          npm run --prefix "$am_lyrics_dir" build
+          cp "$am_lyrics_dir/dist/src/am-lyrics.js" src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/am-lyrics.js
+          test -s src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/am-lyrics.js
 
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v5
@@ -78,12 +92,13 @@ jobs:
         run: |
           set -euo pipefail
           package_dir="artifacts/package"
-          archive="MonochromeFullscreen_1.0.0.6.zip"
-          md5_file="MonochromeFullscreen_1.0.0.6.md5"
-          sha256_file="MonochromeFullscreen_1.0.0.6.sha256"
+          archive="MonochromeFullscreen_1.0.0.7.zip"
+          md5_file="MonochromeFullscreen_1.0.0.7.md5"
+          sha256_file="MonochromeFullscreen_1.0.0.7.sha256"
           mkdir -p "$package_dir"
           cp src/Jellyfin.Plugin.MonochromeFullscreen/bin/Release/net10.0/Jellyfin.Plugin.MonochromeFullscreen.dll "$package_dir/"
           cp KAWARP_LICENSE.txt LICENSE MONOCHROME_LICENSE.txt THIRD_PARTY_NOTICES.md meta.json "$package_dir/"
+          cp "$RUNNER_TEMP/am-lyrics/LICENSE" "$package_dir/AM_LYRICS_LICENSE.txt"
           find "$package_dir" -maxdepth 1 -type f -print | sort
           test -f "$package_dir/Jellyfin.Plugin.MonochromeFullscreen.dll"
           test ! -e "$package_dir/Jellyfin.Plugin.MonochromeFullscreen.pdb"
@@ -94,10 +109,10 @@ jobs:
       - name: Upload installable plugin
         uses: actions/upload-artifact@v5
         with:
-          name: MonochromeFullscreen-1.0.0.6
+          name: MonochromeFullscreen-1.0.0.7
           path: |
-            artifacts/MonochromeFullscreen_1.0.0.6.zip
-            artifacts/MonochromeFullscreen_1.0.0.6.md5
-            artifacts/MonochromeFullscreen_1.0.0.6.sha256
+            artifacts/MonochromeFullscreen_1.0.0.7.zip
+            artifacts/MonochromeFullscreen_1.0.0.7.md5
+            artifacts/MonochromeFullscreen_1.0.0.7.sha256
           if-no-files-found: error
           retention-days: 30

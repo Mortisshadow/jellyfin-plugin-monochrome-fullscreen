@@ -33,6 +33,7 @@ public sealed class WebClientMiddleware
             ["animation-clock.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.animation-clock.js", "text/javascript; charset=utf-8"),
             ["kawarp-adapter.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.kawarp-adapter.js", "text/javascript; charset=utf-8"),
             ["kawarp.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.kawarp.js", "text/javascript; charset=utf-8"),
+            ["am-lyrics.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.am-lyrics.js", "text/javascript; charset=utf-8"),
             ["lyrics-adapter.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.lyrics-adapter.js", "text/javascript; charset=utf-8"),
             ["lyrics-model.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.lyrics-model.js", "text/javascript; charset=utf-8"),
             ["lyrics-timeline.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.lyrics-timeline.js", "text/javascript; charset=utf-8"),
@@ -171,7 +172,7 @@ public sealed class WebClientMiddleware
 
         if (!content.Contains(InjectionStart, StringComparison.Ordinal))
         {
-            var version = MonochromeFullscreenPlugin.Instance?.Version?.ToString() ?? "1.0.0.6";
+            var version = MonochromeFullscreenPlugin.Instance?.Version?.ToString() ?? "1.0.0.7";
             var assetRoot = string.Concat(prefix, ClientRoute);
             var injection = string.Concat(
                 InjectionStart,

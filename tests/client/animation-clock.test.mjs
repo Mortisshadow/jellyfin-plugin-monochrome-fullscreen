@@ -103,6 +103,18 @@ test('visibility resume primes the first resumed frame', () => {
     fixture.visualizer.destroy();
 });
 
+test('adaptive-quality resize redraws the previous frame synchronously', () => {
+    const fixture = visualizerFixture();
+    fixture.visualizer.setOverlayOpen(true);
+    fixture.frame(0);
+    assert.equal(fixture.renderedTimes.length, 1);
+
+    fixture.visualizer.degrade();
+    assert.equal(fixture.renderedTimes.length, 2);
+    assert.equal(fixture.renderedTimes.at(-1), fixture.renderedTimes[0]);
+    fixture.visualizer.destroy();
+});
+
 test('normal frames accumulate active elapsed time and clamp pathological deltas', () => {
     const clock = new ActiveAnimationClock();
     clock.resume();

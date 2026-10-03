@@ -6,7 +6,7 @@ Monochrome Fullscreen is an optional, resource-conscious now-playing overlay for
 
 - Opens a fullscreen audio view automatically with title, artist, artwork, progress, transport, volume, and keyboard/D-pad navigation.
 - Uses a responsive circular player that moves into a balanced two-column layout when lyrics are opened.
-- Loads Jellyfin's native line lyrics and direct `.ttml` sidecars, including timed words, translation/phonetic tracks, agents, and background-vocal metadata where present.
+- Loads Jellyfin's native line lyrics and direct `.ttml` sidecars. TTML uses the same `am-lyrics` web-component renderer as Monochrome, including interpolated word timing, predictive scrolling, translations, duet agents, and background vocals where present.
 - Uses one canvas, trying Kawarp/WebGL2 and then WebGL1; if neither is available it keeps a static gradient background. Motion is time-based, pause-aware, and bounded by a 24/30/60 FPS setting.
 - Injects the client at request time. It serves embedded assets and transiently augments index/config responses in memory; it never edits files in `jellyfin-web`.
 
@@ -28,7 +28,7 @@ The plugin then appears in the Jellyfin catalog and can be installed and updated
 
 ### Manual artifact
 
-Download the latest `MonochromeFullscreen` artifact from a successful GitHub Actions run. Create a `MonochromeFullscreen` folder in Jellyfin’s plugins directory and extract the versioned ZIP into that folder, then restart Jellyfin. The folder contains `Jellyfin.Plugin.MonochromeFullscreen.dll`, `meta.json`, `LICENSE`, `MONOCHROME_LICENSE.txt`, `KAWARP_LICENSE.txt`, and `THIRD_PARTY_NOTICES.md`; Web assets are embedded in the DLL. Do not copy files into the `jellyfin-web` installation.
+Download the latest `MonochromeFullscreen` artifact from a successful GitHub Actions run. Create a `MonochromeFullscreen` folder in Jellyfin’s plugins directory and extract the versioned ZIP into that folder, then restart Jellyfin. The folder contains `Jellyfin.Plugin.MonochromeFullscreen.dll`, `meta.json`, `LICENSE`, `MONOCHROME_LICENSE.txt`, `KAWARP_LICENSE.txt`, `AM_LYRICS_LICENSE.txt`, and `THIRD_PARTY_NOTICES.md`; Web assets are embedded in the DLL. Do not copy files into the `jellyfin-web` installation.
 
 Common plugin roots include `/var/lib/jellyfin/plugins` on Linux, `/config/plugins` in the official container when `/config` is mounted, and `%ProgramData%\Jellyfin\Server\plugins` for the Windows tray installation. Use the plugin path appropriate to the actual Jellyfin installation.
 
@@ -43,9 +43,9 @@ After restart, open Dashboard → Plugins → Monochrome Fullscreen and choose s
 
 ## Lyrics and TTML
 
-The lyrics button in the top-left becomes available when the current audio item has lyrics. Native Jellyfin lyrics are used automatically. For TTML, place a sidecar beside the audio file using either `Track name.ttml` or a language-qualified name such as `Track name.en.ttml`. The endpoint only reads same-directory TTML files for an audio item the signed-in Jellyfin user is allowed to access, rejects DTD/external-entity XML, and caps input at 2 MiB.
+The lyrics button in the Monochrome-style top action row becomes available when the current audio item has lyrics. Native Jellyfin lyrics are used automatically. For TTML, place a sidecar beside the audio file using either `Track name.ttml` or a language-qualified name such as `Track name.en.ttml`. The endpoint only reads same-directory TTML files for an audio item the signed-in Jellyfin user is allowed to access, rejects DTD/external-entity XML, and caps input at 2 MiB.
 
-Timed lyric lines can be clicked or keyboard-activated to seek. TTML `begin`, `end`, and `dur` values support clock, offset, frame, and tick timing. Word-timed spans drive the progressive highlight; translation and phonetic divisions are rendered below the matching main line when their role metadata can be identified.
+Timed lyric lines can be clicked to seek. TTML `begin`, `end`, and `dur` values support clock, offset, frame, and tick timing. The component receives playback time in milliseconds on every animation frame while lyrics are visible, while pause/resume and seeks are anchored to Jellyfin's authoritative state so the animation does not drift or jump ahead during pauses.
 
 ## Uninstall / recovery
 
@@ -58,7 +58,7 @@ Disable the plugin, stop Jellyfin, remove its plugin folder/artifact, and restar
 - Browser caches and service workers can require a hard refresh after installation or configuration changes.
 - There is no manual launcher when automatic opening is disabled.
 - The background is cover-driven and time-animated; it does not inspect PCM/FFT data and is therefore not truly beat-reactive.
-- TTML styling is intentionally not reproduced; timing, text, track roles, agents, and background flags are the supported semantic subset.
+- Native Jellyfin lyrics use the lightweight fallback renderer; the full Monochrome-style word motion requires a valid TTML sidecar.
 - Native TV clients, queue editing, DSP, and automatic release publishing are not included.
 - Jellyfin Media Player compatibility depends on whether the installed version loads the server-hosted Web client.
 

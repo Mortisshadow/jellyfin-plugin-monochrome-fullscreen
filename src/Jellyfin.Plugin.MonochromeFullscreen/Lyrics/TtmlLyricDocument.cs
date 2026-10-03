@@ -6,7 +6,8 @@ internal sealed record TtmlLyricDocument(
     string? Language,
     string SyncType,
     IReadOnlyList<TtmlLyricTrack> Tracks,
-    IReadOnlyDictionary<string, string> Metadata);
+    IReadOnlyDictionary<string, string> Metadata,
+    string? RawTtml = null);
 
 internal sealed record TtmlLyricTrack(
     string Type,

@@ -6,6 +6,18 @@ import { LyricsView } from './lyrics-view.js';
 
 const INSTANCE_KEY = Symbol.for('jellyfin.monochromeFullscreen.instance');
 
+async function loadAmLyricsComponent() {
+    if (globalThis.customElements?.get?.('am-lyrics')) return true;
+    try {
+        await import(new URL('am-lyrics.js', import.meta.url).href);
+        await globalThis.customElements?.whenDefined?.('am-lyrics');
+        return Boolean(globalThis.customElements?.get?.('am-lyrics'));
+    } catch (error) {
+        console.warn('[MonochromeFullscreen] am-lyrics unavailable; using the lightweight lyrics renderer', error);
+        return false;
+    }
+}
+
 export class MonochromeFullscreenController {
     constructor({ adapter, overlay, visualizer, lyricsAdapter, lyricsView, settings }) {
         this.adapter = adapter;
@@ -49,7 +61,7 @@ export class MonochromeFullscreenController {
         this.overlay.update(event.item);
         this.visualizer.setCoverUrl?.(event.item.coverUrl);
         this.visualizer.setPlaybackPaused(event.item.paused);
-        this.lyricsView?.update(event.item.positionTicks);
+        this.lyricsView?.update(event.item.positionTicks, event.item.paused);
 
         if (this.lyricsAdapter && this.lyricsView && event.item.id !== this.lyricsItemId) {
             this.loadLyrics(event.item).catch(error => {
@@ -62,6 +74,7 @@ export class MonochromeFullscreenController {
             && event.item.id !== this.dismissedItemId) {
             this.overlay.open();
             this.visualizer.setOverlayOpen(true);
+            this.lyricsView?.setActive?.(this.overlay.lyricsVisible);
         }
     }
 
@@ -72,17 +85,31 @@ export class MonochromeFullscreenController {
         this.lyricsView.setDocument(null);
         const document = await this.lyricsAdapter.fetch(item.id, item.serverId);
         if (this.lyricsItemId !== item.id) return;
-        this.lyricsView.setDocument(document);
+        this.lyricsView.setDocument(document, item);
         this.lyricsAvailable = Boolean(document?.tracks?.length);
         this.overlay.setLyricsAvailable(this.lyricsAvailable);
         this.overlay.setLyricsVisible(this.lyricsRequested && this.lyricsAvailable);
-        this.lyricsView.update(this.overlay.lastModel?.positionTicks || 0);
+        this.lyricsView.setActive?.(this.overlay.isOpen && this.overlay.lyricsVisible);
+        this.lyricsView.update(
+            this.overlay.lastModel?.positionTicks || 0,
+            this.overlay.lastModel?.paused ?? true
+        );
     }
 
     toggleLyrics() {
         if (!this.lyricsAvailable) return;
         this.lyricsRequested = !this.overlay.lyricsVisible;
         this.overlay.setLyricsVisible(this.lyricsRequested);
+        this.lyricsView?.setActive?.(this.overlay.isOpen && this.overlay.lyricsVisible);
+    }
+
+    toggleVisualizer() {
+        const enabled = this.visualizer.toggleEnabled?.();
+        this.overlay.setVisualizerEnabled?.(enabled !== false);
+    }
+
+    toggleUi() {
+        this.overlay.setUiHidden?.(!this.overlay.uiHidden);
     }
 
     clearLyrics() {
@@ -97,6 +124,7 @@ export class MonochromeFullscreenController {
         if (userInitiated && this.overlay.lastModel?.id) this.dismissedItemId = this.overlay.lastModel.id;
         this.overlay.close({ fromHistory });
         this.visualizer.setOverlayOpen(false);
+        this.lyricsView?.setActive?.(false);
     }
 
     destroy() {
@@ -148,6 +176,7 @@ export default class MonochromeFullscreenPlugin {
     async initialize(dependencies) {
         const settings = await loadSettings();
         if (!settings.enabled) return;
+        const amLyricsAvailable = await loadAmLyricsComponent();
 
         const adapter = new JellyfinPlaybackAdapter({
             events: dependencies.events,
@@ -166,18 +195,25 @@ export default class MonochromeFullscreenPlugin {
                 seekBy: seconds => adapter.seekBySeconds(seconds),
                 setVolume: value => adapter.setVolume(value),
                 toggleMute: () => adapter.toggleMute(),
-                toggleLyrics: () => controller.toggleLyrics()
+                toggleLyrics: () => controller.toggleLyrics(),
+                toggleVisualizer: () => controller.toggleVisualizer(),
+                toggleUi: () => controller.toggleUi()
             }
         });
         overlay.mount();
         const visualizer = new AmbientVisualizer(overlay.canvas, settings);
         const lyricsAdapter = new LyricsAdapter({ apiClientProvider: serverId => adapter.getApiClient(serverId) });
-        const lyricsView = new LyricsView({ host: overlay.lyricsHost, onSeek: ticks => adapter.seekTicks(ticks) });
+        const lyricsView = new LyricsView({
+            host: overlay.lyricsHost,
+            onSeek: ticks => adapter.seekTicks(ticks),
+            preferAmLyrics: amLyricsAvailable
+        });
         controller = new MonochromeFullscreenController({ adapter, overlay, visualizer, lyricsAdapter, lyricsView, settings });
+        overlay.setVisualizerEnabled?.(settings.backgroundEffect !== false);
         this.controller = controller;
         controller.start();
         console.info('[MonochromeFullscreen] Client extension initialized');
     }
 }
 
-export { loadSettings };
+export { loadSettings, loadAmLyricsComponent };

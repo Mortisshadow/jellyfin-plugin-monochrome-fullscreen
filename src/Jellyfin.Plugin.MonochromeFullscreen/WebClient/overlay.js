@@ -47,7 +47,10 @@ const ICONS = {
     pause: ['M8 5.5v13M16 5.5v13'],
     next: ['M17.5 5v14M6 6.5l8 5.5-8 5.5z'],
     volume: ['M4.5 10v4h3l4 3.5v-11L7.5 10z', 'M15 9a4 4 0 010 6M17.5 6.5a7.5 7.5 0 010 11'],
-    muted: ['M4.5 10v4h3l4 3.5v-11L7.5 10z', 'M15.5 9.5l4 5M19.5 9.5l-4 5']
+    muted: ['M4.5 10v4h3l4 3.5v-11L7.5 10z', 'M15.5 9.5l4 5M19.5 9.5l-4 5'],
+    audioLines: ['M5 5v14M9 8v8M13 3v18M17 8v8M21 5v14'],
+    eye: ['M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z', 'M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z'],
+    eyeOff: ['M3 3l18 18', 'M10.6 6.2A10.8 10.8 0 0 1 12 6c6.5 0 10 6 10 6a18 18 0 0 1-3.1 3.8M6.2 6.2C3.5 8 2 12 2 12s3.5 6 10 6a10.8 10.8 0 0 0 3.5-.6']
 };
 
 function formatTime(ticks) {
@@ -73,6 +76,8 @@ export class FullscreenOverlay {
         this.playbackPaused = false;
         this.lyricsAvailable = false;
         this.lyricsHost = null;
+        this.visualizerEnabled = true;
+        this.uiHidden = false;
     }
 
     mount() {
@@ -102,20 +107,42 @@ export class FullscreenOverlay {
         this.backdrop.setAttribute('aria-hidden', 'true');
         root.appendChild(this.backdrop);
 
-        this.lyricsButton = button(this.document, 'mfs-lyrics-toggle', 'Show lyrics');
+        const topActions = element(this.document, 'div', 'mfs-top-actions');
+        topActions.setAttribute('aria-label', 'Fullscreen controls');
+
+        const close = button(this.document, 'mfs-top-action mfs-close', 'Close fullscreen view');
+        close.appendChild(icon(this.document, 'close', ICONS.close));
+        close.dataset.action = 'close';
+        close.addEventListener('click', () => this.actions.close({ fromHistory: false }));
+        topActions.appendChild(close);
+
+        this.lyricsButton = button(this.document, 'mfs-top-action mfs-lyrics-toggle', 'Show lyrics');
         this.lyricsButton.appendChild(icon(this.document, 'lyrics', ICONS.lyrics));
         this.lyricsButton.dataset.action = 'toggleLyrics';
         this.lyricsButton.setAttribute('aria-controls', 'monochromeFullscreenLyrics');
         this.lyricsButton.setAttribute('aria-pressed', 'false');
         this.lyricsButton.setAttribute('aria-expanded', 'false');
         this.lyricsButton.addEventListener('click', () => this.actions.toggleLyrics?.());
-        root.appendChild(this.lyricsButton);
+        topActions.appendChild(this.lyricsButton);
 
-        const close = button(this.document, 'mfs-close', 'Close fullscreen view');
-        close.appendChild(icon(this.document, 'close', ICONS.close));
-        close.dataset.action = 'close';
-        close.addEventListener('click', () => this.actions.close({ fromHistory: false }));
-        root.appendChild(close);
+        this.visualizerButton = button(this.document, 'mfs-top-action mfs-visualizer-toggle', 'Disable visualizer');
+        this.visualizerIcon = icon(this.document, 'audio-lines', ICONS.audioLines);
+        this.visualizerButton.appendChild(this.visualizerIcon);
+        this.visualizerButton.dataset.action = 'toggleVisualizer';
+        this.visualizerButton.setAttribute('aria-pressed', 'true');
+        this.visualizerButton.addEventListener('click', () => this.actions.toggleVisualizer?.());
+        topActions.appendChild(this.visualizerButton);
+
+        this.uiButton = button(this.document, 'mfs-top-action mfs-ui-toggle', 'Hide interface');
+        this.eyeIcon = icon(this.document, 'eye', ICONS.eye);
+        this.eyeOffIcon = icon(this.document, 'eye-off', ICONS.eyeOff);
+        setIconHidden(this.eyeOffIcon, true);
+        this.uiButton.append(this.eyeIcon, this.eyeOffIcon);
+        this.uiButton.dataset.action = 'toggleUi';
+        this.uiButton.setAttribute('aria-pressed', 'false');
+        this.uiButton.addEventListener('click', () => this.actions.toggleUi?.());
+        topActions.appendChild(this.uiButton);
+        root.appendChild(topActions);
 
         const layout = element(this.document, 'div', 'mfs-layout');
         const stage = element(this.document, 'div', 'mfs-stage');
@@ -214,7 +241,27 @@ export class FullscreenOverlay {
         this.setLyricsVisible(this.lyricsVisible);
         this.setLyricsAvailable(this.lyricsAvailable);
         this.setPlaybackPaused(this.playbackPaused);
+        this.setVisualizerEnabled(this.visualizerEnabled);
+        this.setUiHidden(this.uiHidden);
         return root;
+    }
+
+    setVisualizerEnabled(enabled) {
+        this.visualizerEnabled = Boolean(enabled);
+        if (this.visualizerEnabled) this.root?.classList.remove('mfs-visualizer-disabled');
+        else this.root?.classList.add('mfs-visualizer-disabled');
+        this.visualizerButton?.setAttribute('aria-pressed', String(this.visualizerEnabled));
+        this.visualizerButton?.setAttribute('aria-label', this.visualizerEnabled ? 'Disable visualizer' : 'Enable visualizer');
+    }
+
+    setUiHidden(hidden) {
+        this.uiHidden = Boolean(hidden);
+        if (this.uiHidden) this.root?.classList.add('mfs-ui-hidden');
+        else this.root?.classList.remove('mfs-ui-hidden');
+        this.uiButton?.setAttribute('aria-pressed', String(this.uiHidden));
+        this.uiButton?.setAttribute('aria-label', this.uiHidden ? 'Show interface' : 'Hide interface');
+        setIconHidden(this.eyeIcon, this.uiHidden);
+        setIconHidden(this.eyeOffIcon, !this.uiHidden);
     }
 
     setLyricsVisible(visible) {

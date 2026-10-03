@@ -164,6 +164,7 @@ export function normalizeLyricDocument(raw, defaults = {}) {
         language,
         syncType: inferSyncType(tracks, value(raw, 'SyncType', 'syncType')),
         tracks,
+        rawTtml: optionalString(value(raw, 'RawTtml', 'rawTtml', 'Ttml', 'ttml')),
         metadata
     };
 }

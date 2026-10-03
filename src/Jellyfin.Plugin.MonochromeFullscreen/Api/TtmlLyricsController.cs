@@ -1,5 +1,6 @@
-using System.Security.Claims;
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Claims;
+using System.Text;
 using System.Xml;
 using Jellyfin.Plugin.MonochromeFullscreen.Lyrics;
 using MediaBrowser.Controller.Entities.Audio;
@@ -68,14 +69,20 @@ public sealed class TtmlLyricsController : ControllerBase
                     continue;
                 }
 
-                TtmlLyricDocument? document;
-                using (var stream = info.OpenRead())
+                string rawTtml;
+                using (var reader = new StreamReader(
+                    info.OpenRead(),
+                    Encoding.UTF8,
+                    detectEncodingFromByteOrderMarks: true))
                 {
-                    document = TtmlLyricParser.Parse(stream);
+                    rawTtml = reader.ReadToEnd();
                 }
+
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(rawTtml), writable: false);
+                var document = TtmlLyricParser.Parse(stream);
                 if (document is not null)
                 {
-                    return Ok(document);
+                    return Ok(document with { RawTtml = rawTtml });
                 }
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or XmlException)
