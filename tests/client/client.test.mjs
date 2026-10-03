@@ -151,7 +151,12 @@ test('renderer falls back from a broken WebGL2 pipeline to WebGL1', () => {
 
 test('styles are scoped and Abyss variables include fallbacks', () => {
   const css = fs.readFileSync(path.resolve('src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/styles.css'), 'utf8');
+  const lyricsCss = fs.readFileSync(path.resolve('src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/lyrics.css'), 'utf8');
   assert.match(css, /#monochromeFullscreen/); assert.match(css, /var\(--abyss-accent,\s*#f6f4ef\)/); assert.match(css, /var\(--abyss-radius,\s*1\.125rem\)/);
+  assert.match(css, /mask-image:\s*radial-gradient\(circle at center,\s*transparent 0 6\.25%/);
+  assert.doesNotMatch(css, /\.mfs-spindle::after/);
+  assert.match(lyricsCss, /--mfs-lyric-color:\s*var\(--abyss-text,\s*#f6f4ef\)/);
+  assert.doesNotMatch(lyricsCss, /linear-gradient\([^\n]*currentColor/);
   assert.doesNotMatch(fs.readFileSync(path.resolve('src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/overlay.js'), 'utf8'), /🔊|🔇|⏮|⏭/);
   for (const line of css.split(/\r?\n/).map(value => value.trim()).filter(value => value.endsWith('{'))) {
     if (line.startsWith('@')) continue;

@@ -55,10 +55,12 @@
 }
 
 #monochromeFullscreen .mfs-lyric-part {
-    background: linear-gradient(90deg, currentColor var(--mfs-lyric-progress, 0%), color-mix(in srgb, currentColor 32%, transparent) var(--mfs-lyric-progress, 0%));
+    --mfs-lyric-color: var(--abyss-text, #f6f4ef);
+    background: linear-gradient(90deg, var(--mfs-lyric-color) var(--mfs-lyric-progress, 0%), color-mix(in srgb, var(--mfs-lyric-color) 32%, transparent) var(--mfs-lyric-progress, 0%));
     background-clip: text;
     color: transparent;
     -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 #monochromeFullscreen .mfs-lyric-translation,

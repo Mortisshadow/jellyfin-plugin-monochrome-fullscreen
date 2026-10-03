@@ -1,12 +1,12 @@
 {
   "category": "General",
-  "changelog": "Add the responsive Monochrome-style lyrics layout, synchronized Jellyfin and TTML lyrics, stable pause-aware background motion, and refined circular player geometry.",
+  "changelog": "Fix invisible word-timed TTML lyrics and replace the CD bullseye with a transparent center cutout and thin silver ring.",
   "description": "Resource-efficient Monochrome-inspired fullscreen now-playing view for the server-hosted Jellyfin Web client.",
   "guid": "c31f3c78-8b2c-4e38-9bb0-5c07bf0bd774",
   "name": "Monochrome Fullscreen",
   "overview": "Fullscreen now-playing view for Jellyfin Web",
   "owner": "Mortisshadow",
   "targetAbi": "12.1.0.0",
-  "timestamp": "2026-10-03T09:44:02Z",
-  "version": "1.0.0.3"
+  "timestamp": "2026-10-03T10:12:38Z",
+  "version": "1.0.0.4"
 }

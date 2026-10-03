@@ -95,21 +95,23 @@
 #monochromeFullscreen .mfs-artwork-frame {
     position: relative; width: min(100%, var(--mfs-column)); aspect-ratio: 1; overflow: hidden;
     border: clamp(.28rem, .55vw, .55rem) solid rgb(255 255 255 / 8%); border-radius: 50%;
-    background: rgb(255 255 255 / 5%); box-shadow: 0 1.75rem 5rem rgb(0 0 0 / 28%);
+    background: transparent; box-shadow: 0 1.75rem 5rem rgb(0 0 0 / 28%);
 }
 
 #monochromeFullscreen .mfs-cover {
     display: block; width: 100%; height: 100%; border-radius: inherit; object-fit: cover;
+    mask-image: radial-gradient(circle at center, transparent 0 6.25%, #000 6.6% 100%);
+    -webkit-mask-image: radial-gradient(circle at center, transparent 0 6.25%, #000 6.6% 100%);
     animation: mfs-record-spin 28s linear infinite; will-change: transform;
 }
 
 #monochromeFullscreen.mfs-playback-paused .mfs-cover { animation-play-state: paused; }
 
 #monochromeFullscreen .mfs-spindle {
-    position: absolute; top: 50%; left: 50%; z-index: 2; width: clamp(2.5rem, 14%, 4.5rem); aspect-ratio: 1;
-    border: clamp(.3rem, .55vw, .55rem) solid rgb(255 255 255 / 52%); border-radius: 50%;
-    background: radial-gradient(circle, #11151b 0 18%, rgb(244 242 236 / 96%) 20% 48%, rgb(18 21 27 / 88%) 51% 100%);
-    box-shadow: 0 .2rem 1.25rem rgb(0 0 0 / 42%); transform: translate(-50%, -50%); pointer-events: none;
+    position: absolute; top: 50%; left: 50%; z-index: 2; width: 23%; aspect-ratio: 1;
+    border: clamp(1px, .12vw, 2px) solid rgb(205 209 211 / 78%); border-radius: 50%;
+    background: transparent; box-shadow: 0 0 .35rem rgb(0 0 0 / 16%), inset 0 0 .18rem rgb(255 255 255 / 18%);
+    transform: translate(-50%, -50%); pointer-events: none;
 }
 
 #monochromeFullscreen .mfs-artwork-frame.mfs-artwork-missing::after {
@@ -118,6 +120,7 @@
 }
 
 #monochromeFullscreen .mfs-artwork-frame.mfs-artwork-missing .mfs-spindle { display: none; }
+#monochromeFullscreen .mfs-artwork-frame.mfs-artwork-missing { background: rgb(255 255 255 / 5%); }
 
 #monochromeFullscreen .mfs-details {
     width: min(100%, var(--mfs-column)); min-width: 0; padding: 0 clamp(.25rem, .8vw, .75rem);
