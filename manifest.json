@@ -8,7 +8,7 @@
     "overview": "Fullscreen now-playing view for Jellyfin Web",
     "versions": [
       {
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "a9ad1b84dafc7259d31b39c76c8d8b7a",
         "changelog": "Fix invisible word-timed TTML lyrics and replace the CD bullseye with a transparent center cutout and thin silver ring.",
         "targetAbi": "12.1.0.0",
         "sourceUrl": "https://github.com/Mortisshadow/jellyfin-plugin-monochrome-fullscreen/releases/download/v1.0.0.4/MonochromeFullscreen_1.0.0.4.zip",
