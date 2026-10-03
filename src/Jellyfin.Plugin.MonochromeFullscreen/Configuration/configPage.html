@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Monochrome Fullscreen</title>
+</head>
+<body>
+<div id="MonochromeFullscreenConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="MonochromeFullscreenConfigForm">
+                <div class="sectionTitleContainer flex align-items-center">
+                    <h2 class="sectionTitle">Monochrome Fullscreen</h2>
+                </div>
+                <p>This extension affects only clients that run the web interface served by this Jellyfin server. A server restart is required after enabling, disabling, installing, or uninstalling it.</p>
+
+                <label class="checkboxContainer">
+                    <input id="mfsEnabled" type="checkbox" is="emby-checkbox">
+                    <span>Enable the Jellyfin Web client extension</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input id="mfsAutoOpen" type="checkbox" is="emby-checkbox">
+                    <span>Open the overlay automatically when audio starts</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input id="mfsBackgroundEffect" type="checkbox" is="emby-checkbox">
+                    <span>Enable the animated background effect</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input id="mfsReducedMotion" type="checkbox" is="emby-checkbox">
+                    <span>Reduce motion</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input id="mfsLowPowerMode" type="checkbox" is="emby-checkbox">
+                    <span>Force the Low Power / TV profile</span>
+                </label>
+
+                <div class="selectContainer">
+                    <label class="selectLabel" for="mfsFpsLimit">Frame-rate limit</label>
+                    <select id="mfsFpsLimit" is="emby-select" class="emby-select-withcolor emby-select">
+                        <option value="24">24 FPS</option>
+                        <option value="30">30 FPS</option>
+                        <option value="60">60 FPS</option>
+                    </select>
+                </div>
+
+                <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                    <span>Save</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (() => {
+            'use strict';
+            const pluginId = 'c31f3c78-8b2c-4e38-9bb0-5c07bf0bd774';
+            const page = document.querySelector('#MonochromeFullscreenConfigPage');
+            const form = page.querySelector('#MonochromeFullscreenConfigForm');
+
+            page.addEventListener('pageshow', async () => {
+                Dashboard.showLoadingMsg();
+                try {
+                    const config = await ApiClient.getPluginConfiguration(pluginId);
+                    page.querySelector('#mfsEnabled').checked = config.Enabled !== false;
+                    page.querySelector('#mfsAutoOpen').checked = config.AutoOpen !== false;
+                    page.querySelector('#mfsBackgroundEffect').checked = config.BackgroundEffect !== false;
+                    page.querySelector('#mfsReducedMotion').checked = config.ReducedMotion === true;
+                    page.querySelector('#mfsLowPowerMode').checked = config.LowPowerMode === true;
+                    page.querySelector('#mfsFpsLimit').value = [24, 30, 60].includes(config.FpsLimit) ? String(config.FpsLimit) : '30';
+                } finally {
+                    Dashboard.hideLoadingMsg();
+                }
+            });
+
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                Dashboard.showLoadingMsg();
+                try {
+                    const config = await ApiClient.getPluginConfiguration(pluginId);
+                    config.Enabled = page.querySelector('#mfsEnabled').checked;
+                    config.AutoOpen = page.querySelector('#mfsAutoOpen').checked;
+                    config.BackgroundEffect = page.querySelector('#mfsBackgroundEffect').checked;
+                    config.ReducedMotion = page.querySelector('#mfsReducedMotion').checked;
+                    config.LowPowerMode = page.querySelector('#mfsLowPowerMode').checked;
+                    const fps = Number.parseInt(page.querySelector('#mfsFpsLimit').value, 10);
+                    config.FpsLimit = [24, 30, 60].includes(fps) ? fps : 30;
+                    const result = await ApiClient.updatePluginConfiguration(pluginId, config);
+                    Dashboard.processPluginConfigurationUpdateResult(result);
+                } finally {
+                    Dashboard.hideLoadingMsg();
+                }
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>
