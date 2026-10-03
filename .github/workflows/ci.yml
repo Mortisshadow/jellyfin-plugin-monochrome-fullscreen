@@ -68,7 +68,9 @@ jobs:
           git clone --filter=blob:none https://github.com/binimum/am-lyrics.git "$am_lyrics_dir"
           git -C "$am_lyrics_dir" checkout --detach "$AM_LYRICS_COMMIT"
           test "$(git -C "$am_lyrics_dir" rev-parse HEAD)" = "$AM_LYRICS_COMMIT"
-          npm ci --prefix "$am_lyrics_dir" --ignore-scripts --no-audit --no-fund
+          # The upstream lock intentionally combines Rollup 4 with an optional
+          # Open WC helper that still advertises a Rollup 3 peer range.
+          npm ci --prefix "$am_lyrics_dir" --ignore-scripts --legacy-peer-deps --no-audit --no-fund
           npm run --prefix "$am_lyrics_dir" build
           cp "$am_lyrics_dir/dist/src/am-lyrics.js" src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/am-lyrics.js
           test -s src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/am-lyrics.js
