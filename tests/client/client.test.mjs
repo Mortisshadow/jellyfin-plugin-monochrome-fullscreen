@@ -155,6 +155,9 @@ test('styles are scoped and Abyss variables include fallbacks', () => {
   assert.match(css, /#monochromeFullscreen/); assert.match(css, /var\(--abyss-accent,\s*#f6f4ef\)/); assert.match(css, /var\(--abyss-radius,\s*1\.125rem\)/);
   assert.match(css, /mask-image:\s*radial-gradient\(circle at center,\s*transparent 0 6\.25%/);
   assert.doesNotMatch(css, /\.mfs-spindle::after/);
+  assert.match(css, /\.mfs-visualizer\s*\{[^}]*opacity:\s*\.8/);
+  assert.match(css, /top:\s*calc\(2rem \+ env\(safe-area-inset-top\)\)/);
+  assert.match(lyricsCss, /opacity:\s*max\(0\.08,\s*calc\(1 - var\(--mfs-lyric-distance\) \* 0\.55\)\)/);
   assert.match(lyricsCss, /--mfs-lyric-color:\s*var\(--abyss-text,\s*#f6f4ef\)/);
   assert.doesNotMatch(lyricsCss, /linear-gradient\([^\n]*currentColor/);
   assert.doesNotMatch(fs.readFileSync(path.resolve('src/Jellyfin.Plugin.MonochromeFullscreen/WebClient/overlay.js'), 'utf8'), /🔊|🔇|⏮|⏭/);

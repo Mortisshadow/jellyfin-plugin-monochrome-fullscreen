@@ -23,13 +23,13 @@
 
 #monochromeFullscreen::before {
     z-index: 0;
-    background: radial-gradient(circle at 50% 48%, rgb(255 255 255 / 4%), transparent 58%), linear-gradient(180deg, rgb(6 8 12 / 10%), rgb(6 8 12 / 38%));
+    background: radial-gradient(circle at 50% 50%, rgb(255 255 255 / 3.5%), transparent 58%), linear-gradient(180deg, rgb(6 8 12 / 12%), rgb(6 8 12 / 34%));
 }
 
 #monochromeFullscreen::after {
     z-index: 1;
-    background: radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--mfs-accent) 25%, transparent), transparent 36%), radial-gradient(circle at 82% 18%, rgb(255 255 255 / 8%), transparent 28%), linear-gradient(135deg, rgb(10 13 18 / 46%), rgb(10 13 18 / 12%));
-    opacity: .34;
+    background: radial-gradient(circle at 20% 22%, color-mix(in srgb, var(--mfs-accent) 28%, transparent), transparent 36%), radial-gradient(circle at 82% 18%, rgb(255 255 255 / 9%), transparent 28%), linear-gradient(135deg, rgb(10 13 18 / 48%), rgb(10 13 18 / 20%) 38%, color-mix(in srgb, var(--mfs-accent) 12%, transparent) 100%);
+    opacity: .36;
 }
 
 #monochromeFullscreen .mfs-cover-backdrop,
@@ -40,13 +40,16 @@
 #monochromeFullscreen .mfs-cover-backdrop {
     z-index: 0; background-position: center; background-size: cover; opacity: .24;
     filter: blur(4rem) saturate(.8) brightness(.6); transform: scale(1.08);
+    transition: opacity .4s ease;
 }
 
-#monochromeFullscreen .mfs-visualizer { z-index: 1; opacity: .5; filter: blur(.5rem) saturate(.9) brightness(.8); }
+#monochromeFullscreen .mfs-visualizer-active + .mfs-cover-backdrop { opacity: 0; }
+
+#monochromeFullscreen .mfs-visualizer { z-index: 1; opacity: .8; filter: blur(.5rem) saturate(.9) brightness(.8); transform: scale(1.03); }
 
 #monochromeFullscreen .mfs-close,
 #monochromeFullscreen .mfs-lyrics-toggle {
-    position: absolute; top: max(1.25rem, env(safe-area-inset-top)); z-index: 5;
+    position: absolute; top: calc(2rem + env(safe-area-inset-top)); z-index: 5;
     display: grid; width: 2.75rem; height: 2.75rem; padding: 0; place-items: center;
     border: 0; border-radius: 999px; color: rgb(255 255 255 / 72%); background: rgb(9 12 18 / 34%);
     backdrop-filter: blur(.625rem); cursor: pointer;
@@ -108,8 +111,8 @@
 #monochromeFullscreen.mfs-playback-paused .mfs-cover { animation-play-state: paused; }
 
 #monochromeFullscreen .mfs-spindle {
-    position: absolute; top: 50%; left: 50%; z-index: 2; width: 23%; aspect-ratio: 1;
-    border: clamp(1px, .12vw, 2px) solid rgb(205 209 211 / 78%); border-radius: 50%;
+    position: absolute; top: 50%; left: 50%; z-index: 2; width: 23.5%; aspect-ratio: 1;
+    border: .125vw solid #ccc; border-radius: 50%;
     background: transparent; box-shadow: 0 0 .35rem rgb(0 0 0 / 16%), inset 0 0 .18rem rgb(255 255 255 / 18%);
     transform: translate(-50%, -50%); pointer-events: none;
 }

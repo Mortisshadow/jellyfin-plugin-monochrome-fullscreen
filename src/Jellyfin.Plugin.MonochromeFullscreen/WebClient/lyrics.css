@@ -23,11 +23,9 @@
     margin: clamp(0.7rem, 1.8vh, 1.6rem) 0;
     color: var(--abyss-text, #f6f4ef);
     cursor: pointer;
-    opacity: max(0.18, calc(1 - var(--mfs-lyric-distance) * 0.17));
-    filter: blur(calc(min(var(--mfs-lyric-distance), 4) * 0.65px));
-    transform: scale(calc(1 - min(var(--mfs-lyric-distance), 4) * 0.018));
-    transform-origin: left center;
-    transition: opacity 220ms ease, filter 220ms ease, transform 220ms ease;
+    opacity: max(0.08, calc(1 - var(--mfs-lyric-distance) * 0.55));
+    filter: blur(calc(min(var(--mfs-lyric-distance), 2) * .085em));
+    transition: opacity 220ms ease, filter 220ms ease;
 }
 
 #monochromeFullscreen .mfs-lyric-line:focus-visible {
@@ -45,13 +43,11 @@
 #monochromeFullscreen .mfs-lyric-active {
     opacity: 1;
     filter: none;
-    transform: none;
 }
 
 #monochromeFullscreen .mfs-lyrics-unsynced .mfs-lyric-line {
     opacity: .9;
     filter: none;
-    transform: none;
 }
 
 #monochromeFullscreen .mfs-lyric-part {

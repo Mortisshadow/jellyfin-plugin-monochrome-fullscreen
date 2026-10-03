@@ -289,6 +289,8 @@ export class AmbientVisualizer {
 
     finishRendererInitialization() {
         this.canvas.hidden = !this.renderer;
+        if (this.renderer) this.canvas.classList?.add?.('mfs-visualizer-active');
+        else this.canvas.classList?.remove?.('mfs-visualizer-active');
         if (!this.renderer) return;
         this.resize();
         if (this.coverUrl && this.renderer.loadCover) {
