@@ -41,6 +41,7 @@ function setIconHidden(node, hidden) {
 // 5b1e6ef9b2531e3c9c9a83a1c7690b5a833567a7 (Apache-2.0).
 const ICONS = {
     close: ['M18 6 6 18M6 6l12 12'],
+    lyrics: ['M5 5h14M5 9h10M5 13h14M5 17h8', 'M17 15v4.25a2.25 2.25 0 11-1.5-2.12V15z'],
     previous: ['M6.5 5v14M18 6.5l-8 5.5 8 5.5z'],
     play: ['M8.5 5.5v13l10-6.5z'],
     pause: ['M8 5.5v13M16 5.5v13'],
@@ -68,6 +69,10 @@ export class FullscreenOverlay {
         this.input = null;
         this.isOpen = false;
         this.lastModel = null;
+        this.lyricsVisible = false;
+        this.playbackPaused = false;
+        this.lyricsAvailable = false;
+        this.lyricsHost = null;
     }
 
     mount() {
@@ -97,6 +102,15 @@ export class FullscreenOverlay {
         this.backdrop.setAttribute('aria-hidden', 'true');
         root.appendChild(this.backdrop);
 
+        this.lyricsButton = button(this.document, 'mfs-lyrics-toggle', 'Show lyrics');
+        this.lyricsButton.appendChild(icon(this.document, 'lyrics', ICONS.lyrics));
+        this.lyricsButton.dataset.action = 'toggleLyrics';
+        this.lyricsButton.setAttribute('aria-controls', 'monochromeFullscreenLyrics');
+        this.lyricsButton.setAttribute('aria-pressed', 'false');
+        this.lyricsButton.setAttribute('aria-expanded', 'false');
+        this.lyricsButton.addEventListener('click', () => this.actions.toggleLyrics?.());
+        root.appendChild(this.lyricsButton);
+
         const close = button(this.document, 'mfs-close', 'Close fullscreen view');
         close.appendChild(icon(this.document, 'close', ICONS.close));
         close.dataset.action = 'close';
@@ -104,6 +118,8 @@ export class FullscreenOverlay {
         root.appendChild(close);
 
         const layout = element(this.document, 'div', 'mfs-layout');
+        const stage = element(this.document, 'div', 'mfs-stage');
+        const player = element(this.document, 'div', 'mfs-player');
         const artworkFrame = element(this.document, 'div', 'mfs-artwork-frame');
         this.cover = element(this.document, 'img', 'mfs-cover');
         this.cover.alt = '';
@@ -113,6 +129,9 @@ export class FullscreenOverlay {
             artworkFrame.classList.add('mfs-artwork-missing');
         });
         artworkFrame.appendChild(this.cover);
+        const spindle = element(this.document, 'span', 'mfs-spindle');
+        spindle.setAttribute('aria-hidden', 'true');
+        artworkFrame.appendChild(spindle);
 
         const details = element(this.document, 'div', 'mfs-details');
         this.title = element(this.document, 'h1', 'mfs-title', 'Unknown title');
@@ -170,7 +189,18 @@ export class FullscreenOverlay {
         volumeGroup.append(this.muteButton, this.volume);
         details.appendChild(volumeGroup);
 
-        layout.append(artworkFrame, details);
+        player.append(artworkFrame, details);
+
+        this.lyricsPane = element(this.document, 'section', 'mfs-lyrics-pane');
+        this.lyricsPane.id = 'monochromeFullscreenLyrics';
+        this.lyricsPane.setAttribute('aria-label', 'Lyrics');
+        this.lyricsPane.setAttribute('aria-hidden', 'true');
+        this.lyricsPane.setAttribute('inert', '');
+        this.lyricsHost = element(this.document, 'div', 'mfs-lyrics-host');
+        this.lyricsPane.appendChild(this.lyricsHost);
+
+        stage.append(player, this.lyricsPane);
+        layout.appendChild(stage);
         root.appendChild(layout);
         this.document.body.appendChild(root);
 
@@ -181,7 +211,37 @@ export class FullscreenOverlay {
             historyObject: this.window.history,
             windowObject: this.window
         });
+        this.setLyricsVisible(this.lyricsVisible);
+        this.setLyricsAvailable(this.lyricsAvailable);
+        this.setPlaybackPaused(this.playbackPaused);
         return root;
+    }
+
+    setLyricsVisible(visible) {
+        this.lyricsVisible = Boolean(visible) && this.lyricsAvailable;
+        if (!this.root) return;
+        if (this.lyricsVisible) this.root.classList.add('mfs-lyrics-visible');
+        else this.root.classList.remove('mfs-lyrics-visible');
+        this.lyricsButton?.setAttribute('aria-pressed', String(this.lyricsVisible));
+        this.lyricsButton?.setAttribute('aria-expanded', String(this.lyricsVisible));
+        this.lyricsButton?.setAttribute('aria-label', this.lyricsVisible ? 'Hide lyrics' : 'Show lyrics');
+        this.lyricsPane?.setAttribute('aria-hidden', String(!this.lyricsVisible));
+        if (this.lyricsVisible) this.lyricsPane?.removeAttribute('inert');
+        else this.lyricsPane?.setAttribute('inert', '');
+    }
+
+    setLyricsAvailable(available) {
+        this.lyricsAvailable = Boolean(available);
+        if (!this.lyricsAvailable) this.setLyricsVisible(false);
+        if (this.lyricsAvailable) this.lyricsButton?.removeAttribute('disabled');
+        else this.lyricsButton?.setAttribute('disabled', '');
+        this.lyricsButton?.setAttribute('aria-disabled', String(!this.lyricsAvailable));
+    }
+
+    setPlaybackPaused(paused) {
+        this.playbackPaused = Boolean(paused);
+        if (this.playbackPaused) this.root?.classList.add('mfs-playback-paused');
+        else this.root?.classList.remove('mfs-playback-paused');
     }
 
     open() {
@@ -217,6 +277,7 @@ export class FullscreenOverlay {
         this.progress.disabled = !model.canSeek;
         setIconHidden(this.playIcon, !model.paused);
         setIconHidden(this.pauseIcon, model.paused);
+        this.setPlaybackPaused(model.paused);
         this.playButton.setAttribute('aria-label', model.paused ? 'Play' : 'Pause');
         this.volume.value = String(Math.max(0, Math.min(100, model.volume)));
         setIconHidden(this.volumeIcon, model.muted);
@@ -243,6 +304,7 @@ export class FullscreenOverlay {
         this.root?.remove();
         this.root = null;
         this.input = null;
+        this.lyricsHost = null;
     }
 }
 

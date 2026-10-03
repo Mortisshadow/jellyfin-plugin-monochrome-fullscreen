@@ -1,12 +1,12 @@
 {
   "category": "General",
-  "changelog": "Use Monochrome's actual Kawarp WebGL background, fix play/pause and mute icon state, and retain the lightweight renderer as a compatibility fallback.",
+  "changelog": "Add the responsive Monochrome-style lyrics layout, synchronized Jellyfin and TTML lyrics, stable pause-aware background motion, and refined circular player geometry.",
   "description": "Resource-efficient Monochrome-inspired fullscreen now-playing view for the server-hosted Jellyfin Web client.",
   "guid": "c31f3c78-8b2c-4e38-9bb0-5c07bf0bd774",
   "name": "Monochrome Fullscreen",
   "overview": "Fullscreen now-playing view for Jellyfin Web",
   "owner": "Mortisshadow",
   "targetAbi": "12.1.0.0",
-  "timestamp": "2026-10-02T19:00:00Z",
-  "version": "1.0.0.2"
+  "timestamp": "2026-10-03T09:44:02Z",
+  "version": "1.0.0.3"
 }

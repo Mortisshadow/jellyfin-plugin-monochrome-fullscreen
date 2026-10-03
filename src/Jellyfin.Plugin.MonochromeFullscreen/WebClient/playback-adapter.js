@@ -113,6 +113,7 @@ export class JellyfinPlaybackAdapter {
 
         return {
             id: String(item.Id || ''),
+            serverId: String(item.ServerId || ''),
             title: String(item.Name || 'Unknown title'),
             artist: String(artist || 'Unknown artist'),
             album: String(item.Album || ''),
@@ -124,6 +125,10 @@ export class JellyfinPlaybackAdapter {
             canSeek: playState.CanSeek !== false,
             coverUrl: this.getCoverUrl(item)
         };
+    }
+
+    getApiClient(serverId) {
+        return serverId ? this.connections.getApiClient?.(serverId) || null : null;
     }
 
     getCoverUrl(item) {
@@ -173,6 +178,14 @@ export class JellyfinPlaybackAdapter {
         const current = Number(state?.PlayState?.PositionTicks || 0);
         const duration = Number(state?.NowPlayingItem?.RunTimeTicks || this.manager.duration?.(this.player) || 0);
         const target = Math.max(0, Math.min(duration || Number.MAX_SAFE_INTEGER, current + (seconds * TICKS_PER_SECOND)));
+        this.manager.seek?.(target, this.player);
+    }
+
+    seekTicks(positionTicks) {
+        if (!this.player) return;
+        const state = this.manager.getPlayerState(this.player);
+        const duration = Number(state?.NowPlayingItem?.RunTimeTicks || this.manager.duration?.(this.player) || 0);
+        const target = Math.max(0, Math.min(duration || Number.MAX_SAFE_INTEGER, Number(positionTicks) || 0));
         this.manager.seek?.(target, this.player);
     }
 

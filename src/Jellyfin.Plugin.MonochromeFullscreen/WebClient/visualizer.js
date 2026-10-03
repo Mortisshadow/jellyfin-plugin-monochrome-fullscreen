@@ -1,4 +1,5 @@
 import { createKawarpRenderer } from './kawarp-adapter.js';
+import { ActiveAnimationClock } from './animation-clock.js';
 
 const CONTEXT_OPTIONS = {
     powerPreference: 'low-power',
@@ -187,6 +188,7 @@ export class AmbientVisualizer {
         this.isOverlayOpen = false;
         this.isPlaybackPaused = false;
         this.contextLost = false;
+        this.animationClock = new ActiveAnimationClock();
         this.lastFrame = 0;
         this.slowSince = 0;
         this.sampleStart = 0;
@@ -278,6 +280,7 @@ export class AmbientVisualizer {
             this.finishRendererInitialization();
         }
         if (!this.renderer) return;
+        this.animationClock.resume();
         this.lastFrame = 0;
         this.sampleStart = 0;
         this.sampleFrames = 0;
@@ -296,6 +299,7 @@ export class AmbientVisualizer {
     }
 
     stop() {
+        this.animationClock.pause();
         if (this.frameHandle !== null) {
             this.cancelFrame(this.frameHandle);
             this.frameHandle = null;
@@ -304,10 +308,14 @@ export class AmbientVisualizer {
 
     onFrame(timestamp) {
         this.frameHandle = null;
-        if (!this.isOverlayOpen || this.isPlaybackPaused || this.document.hidden || this.contextLost) return;
+        if (!this.isOverlayOpen || this.isPlaybackPaused || this.document.hidden || this.contextLost) {
+            this.animationClock.pause();
+            return;
+        }
+        const activeTime = this.animationClock.advance(timestamp);
         const interval = 1000 / this.currentFps;
         if (!this.lastFrame || timestamp - this.lastFrame >= interval) {
-            this.renderer?.render(timestamp, this.canvas.width, this.canvas.height, this.particles);
+            this.renderer?.render(activeTime, this.canvas.width, this.canvas.height, this.particles);
             this.lastFrame = timestamp;
             this.measurePerformance(timestamp);
         }

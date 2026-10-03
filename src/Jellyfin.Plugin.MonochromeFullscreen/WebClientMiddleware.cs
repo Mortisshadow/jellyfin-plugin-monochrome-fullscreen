@@ -30,9 +30,15 @@ public sealed class WebClientMiddleware
             ["overlay.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.overlay.js", "text/javascript; charset=utf-8"),
             ["input-adapter.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.input-adapter.js", "text/javascript; charset=utf-8"),
             ["visualizer.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.visualizer.js", "text/javascript; charset=utf-8"),
+            ["animation-clock.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.animation-clock.js", "text/javascript; charset=utf-8"),
             ["kawarp-adapter.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.kawarp-adapter.js", "text/javascript; charset=utf-8"),
             ["kawarp.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.kawarp.js", "text/javascript; charset=utf-8"),
-            ["styles.css"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.styles.css", "text/css; charset=utf-8")
+            ["lyrics-adapter.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.lyrics-adapter.js", "text/javascript; charset=utf-8"),
+            ["lyrics-model.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.lyrics-model.js", "text/javascript; charset=utf-8"),
+            ["lyrics-timeline.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.lyrics-timeline.js", "text/javascript; charset=utf-8"),
+            ["lyrics-view.js"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.lyrics-view.js", "text/javascript; charset=utf-8"),
+            ["styles.css"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.styles.css", "text/css; charset=utf-8"),
+            ["lyrics.css"] = ("Jellyfin.Plugin.MonochromeFullscreen.WebClient.lyrics.css", "text/css; charset=utf-8")
         };
     private static readonly Action<ILogger, string, Exception?> LogIndexReadFailure = LoggerMessage.Define<string>(
         LogLevel.Error,
@@ -165,11 +171,12 @@ public sealed class WebClientMiddleware
 
         if (!content.Contains(InjectionStart, StringComparison.Ordinal))
         {
-            var version = MonochromeFullscreenPlugin.Instance?.Version?.ToString() ?? "1.0.0.2";
+            var version = MonochromeFullscreenPlugin.Instance?.Version?.ToString() ?? "1.0.0.3";
             var assetRoot = string.Concat(prefix, ClientRoute);
             var injection = string.Concat(
                 InjectionStart,
                 "<link rel=\"stylesheet\" href=\"", WebUtility.HtmlEncode(assetRoot), "styles.css?v=", WebUtility.UrlEncode(version), "\">",
+                "<link rel=\"stylesheet\" href=\"", WebUtility.HtmlEncode(assetRoot), "lyrics.css?v=", WebUtility.UrlEncode(version), "\">",
                 "<script defer src=\"", WebUtility.HtmlEncode(assetRoot), "bootstrap.js?v=", WebUtility.UrlEncode(version), "\"></script>",
                 InjectionEnd);
 

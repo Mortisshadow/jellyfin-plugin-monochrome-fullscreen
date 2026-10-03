@@ -86,6 +86,26 @@ test('controller start is idempotent and destroy unsubscribes once', () => {
   controller.start(); controller.start(); assert.equal(subscriptions, 1); assert.equal(starts, 1); controller.destroy(); controller.destroy(); assert.equal(unsubscribes, 1); assert.equal(destroys, 1);
 });
 
+test('controller loads lyrics once per item and preserves explicit lyrics visibility', async () => {
+  const overlay = {
+    ...fakeOverlay(), lyricsVisible: false, availability: [], visibility: [],
+    setLyricsAvailable(value) { this.availability.push(value); },
+    setLyricsVisible(value) { this.lyricsVisible = value; this.visibility.push(value); }
+  };
+  const lyricDocument = { syncType: 'line', tracks: [{ type: 'main', lines: [{ id: 'a', startTicks: 0, endTicks: 10, text: 'line', parts: [] }] }] };
+  const fetches = [];
+  const lyricsAdapter = { async fetch(id, serverId) { fetches.push([id, serverId]); return lyricDocument; }, abort() {}, destroy() {} };
+  const lyricsView = { documents: [], positions: [], setDocument(value) { this.documents.push(value); }, update(value) { this.positions.push(value); }, destroy() {} };
+  const controller = new MonochromeFullscreenController({ adapter: {}, overlay, visualizer: fakeVisualizer(), lyricsAdapter, lyricsView, settings: { enabled: true, autoOpen: false } });
+  const event = audio('track'); event.item.serverId = 'server'; event.item.positionTicks = 4;
+  controller.onPlaybackEvent(event);
+  await Promise.resolve();
+  assert.deepEqual(fetches, [['track', 'server']]); assert.equal(controller.lyricsAvailable, true);
+  controller.toggleLyrics(); assert.equal(overlay.lyricsVisible, true);
+  controller.onPlaybackEvent({ ...event, type: 'update', item: { ...event.item, positionTicks: 8 } });
+  assert.equal(fetches.length, 1); assert.equal(lyricsView.positions.at(-1), 8);
+});
+
 test('overlay handles Escape, close callback, missing metadata, and text as data', () => {
   globalThis.CSS = { escape: value => String(value).replaceAll('"', '\\"') };
   const documentObject = new Document(); const windowObject = new Window(); const actions = { closeCalls: [], close(options) { this.closeCalls.push(options); }, seek() {}, seekBy() {}, previous() {}, next() {}, playPause() {}, setVolume() {}, toggleMute() {} };
@@ -137,4 +157,12 @@ test('styles are scoped and Abyss variables include fallbacks', () => {
     if (line.startsWith('@')) continue;
     assert.equal(line.startsWith('#monochromeFullscreen'), true, `unscoped selector: ${line}`);
   }
+});
+
+test('middleware exposes every imported client module and both stylesheets', () => {
+  const middleware = fs.readFileSync(path.resolve('src/Jellyfin.Plugin.MonochromeFullscreen/WebClientMiddleware.cs'), 'utf8');
+  for (const asset of ['animation-clock.js', 'lyrics-adapter.js', 'lyrics-model.js', 'lyrics-timeline.js', 'lyrics-view.js', 'lyrics.css']) {
+    assert.match(middleware, new RegExp(`\\["${asset.replace('.', '\\.')}"\\]`));
+  }
+  assert.match(middleware, /lyrics\.css\?v=/);
 });

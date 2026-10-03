@@ -1,0 +1,112 @@
+#monochromeFullscreen .mfs-lyrics-host {
+    position: relative;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%);
+}
+
+#monochromeFullscreen .mfs-lyrics {
+    height: 100%;
+    overflow: auto;
+    padding: clamp(8rem, 28vh, 22rem) 0;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+}
+
+#monochromeFullscreen .mfs-lyrics::-webkit-scrollbar {
+    display: none;
+}
+
+#monochromeFullscreen .mfs-lyric-line {
+    --mfs-lyric-distance: 6;
+    margin: clamp(0.7rem, 1.8vh, 1.6rem) 0;
+    color: var(--abyss-text, #f6f4ef);
+    cursor: pointer;
+    opacity: max(0.18, calc(1 - var(--mfs-lyric-distance) * 0.17));
+    filter: blur(calc(min(var(--mfs-lyric-distance), 4) * 0.65px));
+    transform: scale(calc(1 - min(var(--mfs-lyric-distance), 4) * 0.018));
+    transform-origin: left center;
+    transition: opacity 220ms ease, filter 220ms ease, transform 220ms ease;
+}
+
+#monochromeFullscreen .mfs-lyric-line:focus-visible {
+    outline: 2px solid var(--abyss-accent, #f6f4ef);
+    outline-offset: 0.35rem;
+}
+
+#monochromeFullscreen .mfs-lyric-main {
+    font-size: clamp(1.45rem, 3.2vw, 4rem);
+    font-weight: 650;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+}
+
+#monochromeFullscreen .mfs-lyric-active {
+    opacity: 1;
+    filter: none;
+    transform: none;
+}
+
+#monochromeFullscreen .mfs-lyrics-unsynced .mfs-lyric-line {
+    opacity: .9;
+    filter: none;
+    transform: none;
+}
+
+#monochromeFullscreen .mfs-lyric-part {
+    background: linear-gradient(90deg, currentColor var(--mfs-lyric-progress, 0%), color-mix(in srgb, currentColor 32%, transparent) var(--mfs-lyric-progress, 0%));
+    background-clip: text;
+    color: transparent;
+    -webkit-background-clip: text;
+}
+
+#monochromeFullscreen .mfs-lyric-translation,
+#monochromeFullscreen .mfs-lyric-phonetic {
+    margin-top: 0.3rem;
+    font-size: clamp(0.9rem, 1.4vw, 1.45rem);
+    font-weight: 450;
+    line-height: 1.3;
+    opacity: 0.72;
+}
+
+#monochromeFullscreen .mfs-lyric-phonetic {
+    font-style: italic;
+    opacity: 0.56;
+}
+
+#monochromeFullscreen .mfs-lyric-background {
+    font-weight: 480;
+    opacity: 0.72;
+}
+
+#monochromeFullscreen .mfs-lyric-line[data-agents]:not([data-agents=''])::before {
+    content: '';
+    display: inline-block;
+    width: 0.28em;
+    height: 0.28em;
+    margin-right: 0.45em;
+    border-radius: 50%;
+    background: var(--abyss-accent, #f6f4ef);
+    vertical-align: 0.2em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #monochromeFullscreen .mfs-lyrics {
+        scroll-behavior: auto;
+    }
+
+    #monochromeFullscreen .mfs-lyric-line {
+        transition: none;
+    }
+}
+
+@media (min-width: 3000px) {
+    #monochromeFullscreen .mfs-lyrics {
+        max-width: clamp(60rem, 45vw, 96rem);
+    }
+
+    #monochromeFullscreen .mfs-lyric-main {
+        font-size: clamp(3rem, 2.15vw, 5.25rem);
+    }
+}

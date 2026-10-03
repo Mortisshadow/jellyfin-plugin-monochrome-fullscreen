@@ -25,6 +25,9 @@ This ASP.NET startup filter and the Web plugin manager are pragmatic extension p
 - `overlay.js` builds the safe DOM using `textContent`; it does not know about Jellyfin.
 - `input-adapter.js` owns focus, keyboard, D-pad, and browser-back behavior.
 - `visualizer.js` owns the single canvas and renderer lifecycle.
+- `lyrics-adapter.js`, `lyrics-model.js`, and `lyrics-timeline.js` own lyric transport, normalization, and parse-once timeline state.
+- `lyrics-view.js` renders safe text-only lyric DOM and forwards line seeks through the playback adapter.
+- `TtmlLyricsController` authorizes audio-item access and exposes normalized, bounded TTML sidecars.
 
 The bootstrap registers through Jellyfin Web’s built-in Web plugin manager and receives `playbackManager`, `events`, and `ServerConnections`. That manager is part of the official Jellyfin Web source, but it is not a documented compatibility contract for third-party server plugins. A playback adapter subscribes to playback start/stop/player-change plus player time, pause, and volume events, and uses the existing player for controls. The overlay owns focus trapping, browser-back history, Escape/Backspace/BrowserBack, D-pad/arrow navigation, ten-second seeking, and focus restoration.
 
@@ -36,7 +39,7 @@ The existing Jellyfin player remains the only playback source. The adapter calls
 
 High uses up to 60 FPS at scale 1.0; Balanced uses 30 FPS at scale 0.75; Low Power/TV uses 24 FPS at scale 0.5; Static schedules no frames. Effective device pixel ratio is capped at 1.5, or 1.0 in Low Power. Kawarp blurs the cover into small render targets only when artwork changes, then performs the domain warp through the plugin's bounded frame scheduler. There is no `readPixels`, `getImageData`, microphone access, or per-frame cover analysis.
 
-The animation loop stops when the overlay closes, playback pauses, the document is hidden, motion is reduced, or the WebGL context is lost. Resize and orientation changes update the bounded internal resolution. Sustained missed frame budgets reduce particles, then render scale, then FPS; quality is not automatically raised again, avoiding oscillation.
+The animation loop stops when the overlay closes, playback pauses, the document is hidden, motion is reduced, or the WebGL context is lost. A monotonic active-time clock excludes every suspended interval, so resuming cannot jump to a different visual state. Resize and orientation changes update the bounded internal resolution. Sustained missed frame budgets reduce particles, then render scale, then FPS; quality is not automatically raised again, avoiding oscillation.
 
 ## Client boundary
 
@@ -46,7 +49,7 @@ Jellyfin 12 defaults to the Modern React/MUI layout while retaining Legacy layou
 
 ## Failure and security model
 
-Client assets contain no remote executable code, accounts, telemetry, or secrets. The public settings response contains only feature flags and render limits. Metadata uses DOM text properties rather than HTML parsing. Initialization and subscriptions are idempotent, and close/destroy paths stop animation and remove listeners. Web client incompatibility is fail-soft: the normal Jellyfin Web response remains available when augmentation cannot be performed.
+Client assets contain no remote executable code, accounts, telemetry, or secrets. The public settings response contains only feature flags and render limits. Metadata and lyrics use DOM text properties rather than HTML parsing. TTML access is authenticated, validates the Jellyfin user's access to the audio item, remains inside the media directory, rejects DTD/external-entity XML, and enforces a 2 MiB document cap. Initialization and subscriptions are idempotent, and close/destroy paths stop animation and remove listeners. Web client incompatibility is fail-soft: the normal Jellyfin Web response remains available when augmentation cannot be performed.
 
 ## Catalog packaging
 

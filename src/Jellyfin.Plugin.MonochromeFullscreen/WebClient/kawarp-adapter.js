@@ -18,8 +18,8 @@ export async function createKawarpRenderer(canvas) {
         resize() {
             kawarp.resize();
         },
-        render(timestamp) {
-            kawarp.renderFrame(timestamp / 1000);
+        render(activeTime) {
+            kawarp.renderFrame(activeTime / 1000);
         },
         loadCover(url) {
             return kawarp.loadImage(url);
