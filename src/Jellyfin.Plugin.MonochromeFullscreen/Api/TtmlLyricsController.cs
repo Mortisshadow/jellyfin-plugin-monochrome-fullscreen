@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Diagnostics.CodeAnalysis;
 using System.Xml;
 using Jellyfin.Plugin.MonochromeFullscreen.Lyrics;
 using MediaBrowser.Controller.Entities.Audio;
@@ -38,6 +39,10 @@ public sealed class TtmlLyricsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [SuppressMessage(
+        "Security",
+        "CA3003:Review code for file path injection vulnerabilities",
+        Justification = "The path comes from Jellyfin's user-authorized Audio entity, not from the route value; discovery is restricted to matching same-directory sidecars and rejects links.")]
     public IActionResult GetLyrics(Guid itemId)
     {
         var claim = User.FindFirstValue(JellyfinUserIdClaim);
@@ -48,7 +53,7 @@ public sealed class TtmlLyricsController : ControllerBase
 
         var item = _libraryManager.GetItemById<Audio>(itemId, userId);
         var path = item?.Path;
-        if (string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
+        if (string.IsNullOrWhiteSpace(path))
         {
             return NotFound();
         }
@@ -63,8 +68,11 @@ public sealed class TtmlLyricsController : ControllerBase
                     continue;
                 }
 
-                using var stream = new FileStream(sidecar, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, FileOptions.SequentialScan);
-                var document = TtmlLyricParser.Parse(stream);
+                TtmlLyricDocument? document;
+                using (var stream = info.OpenRead())
+                {
+                    document = TtmlLyricParser.Parse(stream);
+                }
                 if (document is not null)
                 {
                     return Ok(document);
@@ -79,18 +87,22 @@ public sealed class TtmlLyricsController : ControllerBase
         return NotFound();
     }
 
-    private static IEnumerable<string> FindSidecars(string audioPath)
+    [SuppressMessage(
+        "Security",
+        "CA3003:Review code for file path injection vulnerabilities",
+        Justification = "This private helper receives only a path from Jellyfin's user-authorized Audio entity and returns canonical matching children from that directory.")]
+    private static string[] FindSidecars(string audioPath)
     {
-        var fullAudioPath = Path.GetFullPath(audioPath);
-        var directory = Path.GetDirectoryName(fullAudioPath);
-        var baseName = Path.GetFileNameWithoutExtension(fullAudioPath);
-        if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(baseName) || !Directory.Exists(directory))
-        {
-            return Array.Empty<string>();
-        }
-
         try
         {
+            var fullAudioPath = Path.GetFullPath(audioPath);
+            var directory = Path.GetDirectoryName(fullAudioPath);
+            var baseName = Path.GetFileNameWithoutExtension(fullAudioPath);
+            if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(baseName) || !Directory.Exists(directory))
+            {
+                return Array.Empty<string>();
+            }
+
             var directoryPrefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)) + Path.DirectorySeparatorChar;
             var pathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
             return Directory.EnumerateFiles(directory, "*.ttml", SearchOption.TopDirectoryOnly)

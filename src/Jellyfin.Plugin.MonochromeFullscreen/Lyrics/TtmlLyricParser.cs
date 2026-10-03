@@ -85,7 +85,7 @@ internal static partial class TtmlLyricParser
             new Dictionary<string, string>(StringComparer.Ordinal) { ["format"] = "ttml" });
     }
 
-    private static IReadOnlyList<TtmlLyricLine> ParseLines(XElement container, TimingContext timing, int trackIndex)
+    private static List<TtmlLyricLine> ParseLines(XElement container, TimingContext timing, int trackIndex)
     {
         var parsed = new List<MutableLine>();
         var lineIndex = 0;
@@ -260,14 +260,14 @@ internal static partial class TtmlLyricParser
         var offset = OffsetTimeRegex().Match(trimmed);
         if (offset.Success && double.TryParse(offset.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var amount))
         {
-            var seconds = offset.Groups[2].Value.ToLowerInvariant() switch
+            var seconds = offset.Groups[2].Value.ToUpperInvariant() switch
             {
-                "h" => amount * 3600,
-                "m" => amount * 60,
-                "s" => amount,
-                "ms" => amount / 1000,
-                "f" => amount / timing.FrameRate,
-                "t" => amount / timing.TickRate,
+                "H" => amount * 3600,
+                "M" => amount * 60,
+                "S" => amount,
+                "MS" => amount / 1000,
+                "F" => amount / timing.FrameRate,
+                "T" => amount / timing.TickRate,
                 _ => double.NaN
             };
             return ToTicks(seconds);
@@ -304,15 +304,15 @@ internal static partial class TtmlLyricParser
 
     private static string InferTrackType(XElement container, int index)
     {
-        var hints = string.Join(' ', container.Attributes().Select(attribute => attribute.Value)).ToLowerInvariant();
-        if (hints.Contains("translation", StringComparison.Ordinal))
+        var hints = string.Join(' ', container.Attributes().Select(attribute => attribute.Value)).ToUpperInvariant();
+        if (hints.Contains("TRANSLATION", StringComparison.Ordinal))
         {
             return "translation";
         }
 
-        if (hints.Contains("transliteration", StringComparison.Ordinal)
-            || hints.Contains("roman", StringComparison.Ordinal)
-            || hints.Contains("phonetic", StringComparison.Ordinal))
+        if (hints.Contains("TRANSLITERATION", StringComparison.Ordinal)
+            || hints.Contains("ROMAN", StringComparison.Ordinal)
+            || hints.Contains("PHONETIC", StringComparison.Ordinal))
         {
             return "phonetic";
         }
@@ -329,7 +329,7 @@ internal static partial class TtmlLyricParser
     private static string? Attribute(XElement element, string localName)
         => element.Attributes().FirstOrDefault(attribute => attribute.Name.LocalName.Equals(localName, StringComparison.OrdinalIgnoreCase))?.Value;
 
-    private static IReadOnlyList<string> SplitTokens(string? value)
+    private static string[] SplitTokens(string? value)
         => string.IsNullOrWhiteSpace(value)
             ? Array.Empty<string>()
             : value.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -380,7 +380,7 @@ internal static partial class TtmlLyricParser
         internal string Id { get; } = id;
         internal long StartTicks { get; } = startTicks;
         internal long EndTicks { get; set; } = endTicks;
-        internal string Text { get; set; } = text;
+        internal string Text { get; } = text;
         internal IReadOnlyList<string> AgentIds { get; } = agentIds;
         internal bool Background { get; } = background;
         internal List<MutablePart> Parts { get; } = parts;
@@ -388,7 +388,7 @@ internal static partial class TtmlLyricParser
 
     private sealed class MutablePart(string text, long startTicks, long endTicks, bool background)
     {
-        internal string Text { get; } = text;
+        internal string Text { get; set; } = text;
         internal long StartTicks { get; set; } = startTicks;
         internal long EndTicks { get; set; } = endTicks;
         internal bool Background { get; } = background;
