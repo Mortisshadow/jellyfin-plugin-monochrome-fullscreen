@@ -1,12 +1,12 @@
 {
   "category": "General",
-  "changelog": "Match Monochrome's brighter Kawarp compositing, lower the top controls, and make the active lyric line visually unambiguous.",
+  "changelog": "Parse am-lyrics TTML timing correctly, merge song sections into one timeline, preserve background vocals, and brighten Kawarp output.",
   "description": "Resource-efficient Monochrome-inspired fullscreen now-playing view for the server-hosted Jellyfin Web client.",
   "guid": "c31f3c78-8b2c-4e38-9bb0-5c07bf0bd774",
   "name": "Monochrome Fullscreen",
   "overview": "Fullscreen now-playing view for Jellyfin Web",
   "owner": "Mortisshadow",
   "targetAbi": "12.1.0.0",
-  "timestamp": "2026-10-03T10:28:43Z",
-  "version": "1.0.0.5"
+  "timestamp": "2026-10-03T10:50:36Z",
+  "version": "1.0.0.6"
 }

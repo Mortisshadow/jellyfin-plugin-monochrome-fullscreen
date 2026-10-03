@@ -67,6 +67,9 @@ jobs:
       - name: Restore
         run: dotnet restore Jellyfin.Plugin.MonochromeFullscreen.sln
 
+      - name: Test TTML parser
+        run: dotnet run --project tests/parser/ParserSmokeTests.csproj --configuration Release
+
       - name: Build
         run: dotnet build Jellyfin.Plugin.MonochromeFullscreen.sln --configuration Release --no-restore
 
@@ -75,9 +78,9 @@ jobs:
         run: |
           set -euo pipefail
           package_dir="artifacts/package"
-          archive="MonochromeFullscreen_1.0.0.5.zip"
-          md5_file="MonochromeFullscreen_1.0.0.5.md5"
-          sha256_file="MonochromeFullscreen_1.0.0.5.sha256"
+          archive="MonochromeFullscreen_1.0.0.6.zip"
+          md5_file="MonochromeFullscreen_1.0.0.6.md5"
+          sha256_file="MonochromeFullscreen_1.0.0.6.sha256"
           mkdir -p "$package_dir"
           cp src/Jellyfin.Plugin.MonochromeFullscreen/bin/Release/net10.0/Jellyfin.Plugin.MonochromeFullscreen.dll "$package_dir/"
           cp KAWARP_LICENSE.txt LICENSE MONOCHROME_LICENSE.txt THIRD_PARTY_NOTICES.md meta.json "$package_dir/"
@@ -91,10 +94,10 @@ jobs:
       - name: Upload installable plugin
         uses: actions/upload-artifact@v5
         with:
-          name: MonochromeFullscreen-1.0.0.5
+          name: MonochromeFullscreen-1.0.0.6
           path: |
-            artifacts/MonochromeFullscreen_1.0.0.5.zip
-            artifacts/MonochromeFullscreen_1.0.0.5.md5
-            artifacts/MonochromeFullscreen_1.0.0.5.sha256
+            artifacts/MonochromeFullscreen_1.0.0.6.zip
+            artifacts/MonochromeFullscreen_1.0.0.6.md5
+            artifacts/MonochromeFullscreen_1.0.0.6.sha256
           if-no-files-found: error
           retention-days: 30

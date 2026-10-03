@@ -50,17 +50,35 @@ internal static partial class TtmlLyricParser
         }
 
         var tracks = new List<TtmlLyricTrack>();
-        for (var trackIndex = 0; trackIndex < containers.Count; trackIndex++)
+        var trackLookup = new Dictionary<(string Type, string? Language), int>();
+        for (var containerIndex = 0; containerIndex < containers.Count; containerIndex++)
         {
-            var container = containers[trackIndex];
-            var lines = ParseLines(container, timing, trackIndex);
+            var container = containers[containerIndex];
+            var lines = ParseLines(container, timing, containerIndex);
             if (lines.Count == 0)
             {
                 continue;
             }
 
-            var type = InferTrackType(container, trackIndex);
-            tracks.Add(new TtmlLyricTrack(type, Attribute(container, "lang") ?? language, lines));
+            var type = InferTrackType(container);
+            var trackLanguage = Attribute(container, "lang") ?? language;
+            var key = (type, trackLanguage);
+            if (trackLookup.TryGetValue(key, out var existingIndex))
+            {
+                var existing = tracks[existingIndex];
+                tracks[existingIndex] = existing with
+                {
+                    Lines = existing.Lines.Concat(lines)
+                        .OrderBy(static line => line.StartTicks)
+                        .ThenBy(static line => line.Id, StringComparer.Ordinal)
+                        .ToList()
+                };
+            }
+            else
+            {
+                trackLookup.Add(key, tracks.Count);
+                tracks.Add(new TtmlLyricTrack(type, trackLanguage, lines));
+            }
         }
 
         if (tracks.Count == 0)
@@ -273,7 +291,19 @@ internal static partial class TtmlLyricParser
             return ToTicks(seconds);
         }
 
+        if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var secondsOnly))
+        {
+            return ToTicks(secondsOnly);
+        }
+
         var components = trimmed.Split(':');
+        if (components.Length == 2
+            && double.TryParse(components[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutesOnly)
+            && double.TryParse(components[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var minuteSeconds))
+        {
+            return ToTicks((minutesOnly * 60) + minuteSeconds);
+        }
+
         if (components.Length is 3 or 4
             && double.TryParse(components[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var hours)
             && double.TryParse(components[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes)
@@ -302,7 +332,7 @@ internal static partial class TtmlLyricParser
         return checked((long)Math.Round(seconds * TicksPerSecond, MidpointRounding.AwayFromZero));
     }
 
-    private static string InferTrackType(XElement container, int index)
+    private static string InferTrackType(XElement container)
     {
         var hints = string.Join(' ', container.Attributes().Select(attribute => attribute.Value)).ToUpperInvariant();
         if (hints.Contains("TRANSLATION", StringComparison.Ordinal))
@@ -317,13 +347,16 @@ internal static partial class TtmlLyricParser
             return "phonetic";
         }
 
-        return index == 0 ? "main" : "other";
+        return "main";
     }
 
     private static bool IsBackground(XElement element)
     {
-        var hints = string.Join(' ', element.Attributes().Select(attribute => attribute.Value));
-        return hints.Contains("background", StringComparison.OrdinalIgnoreCase);
+        return element.AncestorsAndSelf()
+            .SelectMany(node => node.Attributes())
+            .Select(attribute => attribute.Value)
+            .Any(value => value.Contains("background", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("x-bg", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string? Attribute(XElement element, string localName)
